@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FastAPI 学习笔记</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 17px;
+    display: flex;
+    background: #f4f6f9;
+    color: #222;
+  }
+
+  /* ── 侧边栏 ── */
+  #sidebar {
+    width: 260px;
+    min-width: 260px;
+    height: 100vh;           /* 固定高度，不用 min-height */
+    overflow-y: auto;        /* 内容超出时可滚动 */
+    background: #1e293b;
+    color: #cbd5e1;
+    position: sticky;
+    top: 0;
+    padding: 20px 0 40px;
+  }
+  #sidebar h2 {
+    font-size: 15px;
+    color: #94a3b8;
+    padding: 0 20px 14px;
+    border-bottom: 1px solid #334155;
+    margin-bottom: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* 手风琴：每课父条目 */
+  .nav-lesson {
+    padding: 10px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 15px;
+    color: #e2e8f0;
+    transition: background 0.15s;
+    user-select: none;
+  }
+  .nav-lesson:hover { background: #334155; }
+  .nav-lesson.active { color: #38bdf8; }
+  .nav-lesson .arrow {
+    font-size: 11px;
+    transition: transform 0.25s;
+    color: #64748b;
+  }
+  .nav-lesson.open .arrow { transform: rotate(90deg); }
+
+  /* 子标题列表，默认折叠 */
+  .nav-sub {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    background: #0f172a;
+  }
+  .nav-sub.open { max-height: 400px; }
+  .nav-sub a {
+    display: block;
+    padding: 7px 20px 7px 32px;
+    font-size: 14px;
+    color: #94a3b8;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .nav-sub a:hover { color: #38bdf8; }
+
+  /* ── 正文区 ── */
+  #content {
+    flex: 1;
+    padding: 40px 48px;
+    max-width: 960px;
+  }
+  #content h1 {
+    font-size: 26px;
+    margin-bottom: 8px;
+    color: #0f172a;
+  }
+  #content .subtitle {
+    color: #64748b;
+    margin-bottom: 40px;
+    font-size: 15px;
+  }
+
+  /* 每课 banner */
+  .lesson-banner {
+    border-radius: 12px;
+    padding: 18px 24px;
+    margin-bottom: 28px;
+    margin-top: 48px;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .lesson-banner .lesson-num {
+    font-size: 13px;
+    font-weight: 400;
+    opacity: 0.8;
+    margin-bottom: 4px;
+  }
+
+  /* 各课颜色 */
+  .lesson-1  { background: linear-gradient(135deg, #0ea5e9, #2563eb); }
+  .lesson-2  { background: linear-gradient(135deg, #10b981, #059669); }
+  .lesson-3  { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  .lesson-4  { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+  .lesson-5  { background: linear-gradient(135deg, #ec4899, #db2777); }
+  .lesson-6  { background: linear-gradient(135deg, #14b8a6, #0d9488); }
+  .lesson-7  { background: linear-gradient(135deg, #f97316, #ea580c); }
+  .lesson-8  { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+  .lesson-9  { background: linear-gradient(135deg, #84cc16, #65a30d); }
+  .lesson-10 { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+  .lesson-11 { background: linear-gradient(135deg, #a855f7, #9333ea); }
+  .lesson-12 { background: linear-gradient(135deg, #ef4444, #dc2626); }
+  .lesson-13 { background: linear-gradient(135deg, #78716c, #57534e); }
+  .lesson-14 { background: linear-gradient(135deg, #0f766e, #0d9488); }
+  .lesson-15 { background: linear-gradient(135deg, #1d4ed8, #1e40af); }
+  .lesson-16 { background: linear-gradient(135deg, #be185d, #9d174d); }
+
+  /* 正文排版 */
+  .lesson-section { margin-bottom: 36px; }
+  .lesson-section h3 {
+    font-size: 18px;
+    color: #1e293b;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .lesson-section p {
+    line-height: 1.8;
+    color: #374151;
+    margin-bottom: 10px;
+  }
+
+  /* 代码块 */
+  pre {
+    background: #0f172a;
+    border-radius: 8px;
+    padding: 20px;
+    overflow-x: auto;
+    margin: 12px 0 18px;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+  pre code { color: #e2e8f0; }
+
+  /* 语法着色 */
+  .kw  { color: #c678dd; }  /* keyword */
+  .fn  { color: #61afef; }  /* function */
+  .st  { color: #98c379; }  /* string */
+  .cm  { color: #5c6370; font-style: italic; }  /* comment */
+  .de  { color: #e5c07b; }  /* decorator */
+  .nu  { color: #d19a66; }  /* number */
+  .tp  { color: #56b6c2; }  /* type */
+
+  /* 流程图 */
+  .flow-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: monospace;
+    font-size: 14px;
+    line-height: 1.9;
+    color: #334155;
+    white-space: pre;
+    overflow-x: auto;
+    margin: 12px 0 18px;
+  }
+
+  /* 知识点格子 */
+  .knowledge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+    margin-top: 12px;
+  }
+  .knowledge-item {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 15px;
+    line-height: 1.6;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .knowledge-item .star { color: #f59e0b; margin-right: 5px; }
+
+  /* API 速查表 */
+  .api-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+    margin-top: 12px;
+  }
+  .api-table th {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 10px 14px;
+    text-align: left;
+  }
+  .api-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+  }
+  .api-table tr:nth-child(even) td { background: #f8fafc; }
+  .api-table code {
+    background: #e2e8f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  /* tip / warning 块 */
+  .tip {
+    background: #ecfdf5;
+    border-left: 4px solid #10b981;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 12px 0;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .warn {
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    margin: 12px 0;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ 侧边栏 ══════════════════ -->
+<nav id="sidebar">
+  <h2>FastAPI 学习笔记</h2>
+
+  <!-- 第 1 课 -->
+  <div class="nav-lesson" data-target="nav-sub-1">
+    <span>第 1 课：Hello FastAPI</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-1">
+    <a href="#l1-what">什么是 FastAPI</a>
+    <a href="#l1-code">第一个应用</a>
+    <a href="#l1-flow">执行流程</a>
+    <a href="#l1-docs">自动文档</a>
+    <a href="#l1-api">API 速查</a>
+  </div>
+
+  <!-- 第 2 课 -->
+  <div class="nav-lesson" data-target="nav-sub-2">
+    <span>第 2 课：路径参数</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-2">
+    <a href="#l2-concept">基础用法</a>
+    <a href="#l2-order">路由顺序陷阱</a>
+    <a href="#l2-enum">Enum 限制值</a>
+    <a href="#l2-path">path 类型</a>
+    <a href="#l2-api">API 速查</a>
+  </div>
+
+  <!-- 第 3 课 -->
+  <div class="nav-lesson" data-target="nav-sub-3">
+    <span>第 3 课：查询参数</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-3">
+    <a href="#l3-basic">基础查询参数</a>
+    <a href="#l3-optional">可选与必填</a>
+    <a href="#l3-bool">bool 自动转换</a>
+    <a href="#l3-query">Query() 约束</a>
+    <a href="#l3-api">API 速查</a>
+  </div>
+
+  <!-- 第 4 课 -->
+  <div class="nav-lesson" data-target="nav-sub-4">
+    <span>第 4 课：请求体 + Pydantic</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-4">
+    <a href="#l4-model">BaseModel 定义</a>
+    <a href="#l4-field">Field 验证</a>
+    <a href="#l4-nested">嵌套模型</a>
+    <a href="#l4-mixed">混合参数</a>
+    <a href="#l4-api">API 速查</a>
+  </div>
+
+  <!-- 第 5 课 -->
+  <div class="nav-lesson" data-target="nav-sub-5">
+    <span>第 5 课：响应模型</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-5">
+    <a href="#l5-filter">过滤敏感字段</a>
+    <a href="#l5-unset">exclude_unset</a>
+    <a href="#l5-status">响应状态码</a>
+    <a href="#l5-api">API 速查</a>
+  </div>
+
+  <!-- 第 6 课 -->
+  <div class="nav-lesson" data-target="nav-sub-6">
+    <span>第 6 课：错误处理</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-6">
+    <a href="#l6-http">HTTPException</a>
+    <a href="#l6-custom">自定义异常</a>
+    <a href="#l6-override">覆盖 422 格式</a>
+    <a href="#l6-api">API 速查</a>
+  </div>
+
+  <!-- 第 7 课 -->
+  <div class="nav-lesson" data-target="nav-sub-7">
+    <span>第 7 课：依赖注入</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-7">
+    <a href="#l7-basic">基础依赖</a>
+    <a href="#l7-class">类依赖</a>
+    <a href="#l7-nested">嵌套依赖</a>
+    <a href="#l7-yield">yield 依赖</a>
+    <a href="#l7-api">API 速查</a>
+  </div>
+
+  <!-- 第 8 课 -->
+  <div class="nav-lesson" data-target="nav-sub-8">
+    <span>第 8 课：中间件与 CORS</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-8">
+    <a href="#l8-cors">CORSMiddleware</a>
+    <a href="#l8-custom">自定义中间件</a>
+    <a href="#l8-order">洋葱模型</a>
+    <a href="#l8-api">API 速查</a>
+  </div>
+
+  <!-- 第 9 课 -->
+  <div class="nav-lesson" data-target="nav-sub-9">
+    <span>第 9 课：安全认证 JWT</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-9">
+    <a href="#l9-concept">JWT 原理</a>
+    <a href="#l9-password">密码哈希</a>
+    <a href="#l9-token">Token 生成</a>
+    <a href="#l9-protect">保护路由</a>
+    <a href="#l9-api">API 速查</a>
+  </div>
+
+  <!-- 第 10 课 -->
+  <div class="nav-lesson" data-target="nav-sub-10">
+    <span>第 10 课：数据库基础</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-10">
+    <a href="#l10-setup">连接配置</a>
+    <a href="#l10-model">ORM 模型</a>
+    <a href="#l10-session">会话管理</a>
+    <a href="#l10-api">API 速查</a>
+  </div>
+
+  <!-- 第 11 课 -->
+  <div class="nav-lesson" data-target="nav-sub-11">
+    <span>第 11 课：完整 CRUD</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-11">
+    <a href="#l11-crud">CRUD 路由设计</a>
+    <a href="#l11-patch">PATCH 部分更新</a>
+    <a href="#l11-soft">软删除</a>
+    <a href="#l11-api">API 速查</a>
+  </div>
+
+  <!-- 第 12 课 -->
+  <div class="nav-lesson" data-target="nav-sub-12">
+    <span>第 12 课：关系模型</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-12">
+    <a href="#l12-one2many">一对多</a>
+    <a href="#l12-many2many">多对多</a>
+    <a href="#l12-n1">N+1 问题</a>
+    <a href="#l12-api">API 速查</a>
+  </div>
+
+  <!-- 第 13 课 -->
+  <div class="nav-lesson" data-target="nav-sub-13">
+    <span>第 13 课：测试</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-13">
+    <a href="#l13-client">TestClient</a>
+    <a href="#l13-override">依赖覆盖</a>
+    <a href="#l13-fixture">pytest fixture</a>
+    <a href="#l13-api">测试速查</a>
+  </div>
+
+  <!-- 第 14 课 -->
+  <div class="nav-lesson" data-target="nav-sub-14">
+    <span>第 14 课：综合项目</span>
+    <span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub" id="nav-sub-14">
+    <a href="#l14-overview">项目总览</a>
+    <a href="#l14-routes">路由设计</a>
+    <a href="#l14-key">核心实现</a>
+    <a href="#l14-summary">学习总结</a>
+  </div>
+
+</nav>
+
+<!-- ══════════════════ 正文 ══════════════════ -->
+<main id="content">
+  <h1>FastAPI 学习笔记</h1>
+  <p class="subtitle">Python 现代高性能 Web 框架 · 从零到实战</p>
+
+  <!-- ───────── 第 1 课 ───────── -->
+  <div id="lesson-1">
+    <div class="lesson-banner lesson-1">
+      <div class="lesson-num">第 1 课</div>
+      Hello FastAPI —— 快速开始
+    </div>
+
+    <div class="lesson-section" id="l1-what">
+      <h3>什么是 FastAPI</h3>
+      <p>
+        FastAPI 是一个基于 <strong>Python 类型提示</strong> 构建的现代 Web 框架，
+        性能与 Node.js / Go 相当，同时极大减少了开发错误。
+      </p>
+      <p>它的三个核心优势：</p>
+      <div class="knowledge-grid">
+        <div class="knowledge-item">
+          <span class="star">★</span><strong>速度</strong><br>
+          基于 Starlette（ASGI 异步框架），性能极高
+        </div>
+        <div class="knowledge-item">
+          <span class="star">★</span><strong>少写代码</strong><br>
+          类型提示即校验，少写约 40% 样板代码
+        </div>
+        <div class="knowledge-item">
+          <span class="star">★</span><strong>自动文档</strong><br>
+          /docs 和 /redoc 开箱即用，零配置
+        </div>
+      </div>
+      <br>
+      <p>FastAPI 的依赖关系：</p>
+      <div class="flow-box">FastAPI
+  ├── Starlette  ← 处理 HTTP / WebSocket / 异步
+  └── Pydantic   ← 数据校验 / 序列化 / 类型转换</div>
+    </div>
+
+    <div class="lesson-section" id="l1-code">
+      <h3>第一个 FastAPI 应用</h3>
+      <p>安装：</p>
+<pre><code><span class="cm"># pip install "fastapi[standard]" 会同时安装 uvicorn</span>
+pip install <span class="st">"fastapi[standard]"</span></code></pre>
+
+      <p>代码（<code>01_hello_fastapi.py</code>）：</p>
+<pre><code><span class="kw">from</span> fastapi <span class="kw">import</span> <span class="tp">FastAPI</span>
+
+<span class="cm"># 创建应用实例，title/description/version 显示在 /docs</span>
+app = <span class="fn">FastAPI</span>(
+    title=<span class="st">"FastAPI 学习项目"</span>,
+    description=<span class="st">"从零学习 FastAPI"</span>,
+    version=<span class="st">"0.1.0"</span>,
+)
+
+<span class="cm"># @app.get("/") 把函数注册为 GET "/" 的处理器</span>
+<span class="cm"># 返回 dict → 自动变成 JSON 响应</span>
+<span class="de">@app.get</span>(<span class="st">"/"</span>)
+<span class="kw">def</span> <span class="fn">read_root</span>():
+    <span class="kw">return</span> {<span class="st">"message"</span>: <span class="st">"Hello, FastAPI!"</span>}
+
+<span class="cm"># {item_id} 声明路径参数，类型提示 int 触发自动校验</span>
+<span class="de">@app.get</span>(<span class="st">"/items/{item_id}"</span>)
+<span class="kw">def</span> <span class="fn">read_item</span>(item_id: <span class="tp">int</span>):
+    <span class="kw">return</span> {<span class="st">"item_id"</span>: item_id}
+
+<span class="de">@app.post</span>(<span class="st">"/items"</span>)
+<span class="kw">def</span> <span class="fn">create_item</span>(name: <span class="tp">str</span>, price: <span class="tp">float</span>):
+    <span class="kw">return</span> {<span class="st">"name"</span>: name, <span class="st">"price"</span>: price, <span class="st">"status"</span>: <span class="st">"created"</span>}</code></pre>
+
+      <p>启动命令：</p>
+<pre><code><span class="cm"># 格式：uvicorn 文件名:app实例名 --reload</span>
+uvicorn 01_hello_fastapi:app --reload
+
+<span class="cm"># 输出示例：</span>
+<span class="cm"># INFO:     Uvicorn running on http://127.0.0.1:8000</span>
+<span class="cm"># INFO:     Waiting for application startup.</span>
+<span class="cm"># INFO:     Application startup complete.</span></code></pre>
+
+      <div class="tip">
+        <strong>提示：</strong> <code>--reload</code> 是开发模式，代码修改后自动重启。
+        生产环境部署时去掉这个参数。
+      </div>
+    </div>
+
+    <div class="lesson-section" id="l1-flow">
+      <h3>执行流程图</h3>
+      <div class="flow-box">客户端发送 HTTP 请求
+        │
+        ▼
+  uvicorn（ASGI 服务器）接收请求
+        │
+        ▼
+  FastAPI 路由匹配（path + method）
+        │
+        ├─ 匹配成功
+        │      │
+        │      ▼
+        │  类型校验（由类型提示自动完成）
+        │      │
+        │      ▼
+        │  执行路径操作函数
+        │      │
+        │      ▼
+        │  返回值序列化为 JSON → 200 OK
+        │
+        └─ 匹配失败 → 404 Not Found
+           类型校验失败 → 422 Unprocessable Entity</div>
+    </div>
+
+    <div class="lesson-section" id="l1-docs">
+      <h3>自动文档</h3>
+      <p>服务启动后，以下地址开箱即用，无需任何配置：</p>
+      <div class="knowledge-grid">
+        <div class="knowledge-item">
+          <strong>/docs</strong><br>
+          Swagger UI 风格，可在浏览器里直接测试每个接口
+        </div>
+        <div class="knowledge-item">
+          <strong>/redoc</strong><br>
+          ReDoc 风格，适合查阅文档结构
+        </div>
+        <div class="knowledge-item">
+          <strong>/openapi.json</strong><br>
+          OpenAPI 规范的 JSON 原始数据，可导入 Postman
+        </div>
+      </div>
+      <div class="warn">
+        <strong>注意：</strong> 生产环境可通过
+        <code>FastAPI(docs_url=None, redoc_url=None)</code> 关闭文档，避免暴露 API 结构。
+      </div>
+    </div>
+
+    <div class="lesson-section" id="l1-api">
+      <h3>API 速查表</h3>
+      <table class="api-table">
+        <tr>
+          <th>用法</th>
+          <th>说明</th>
+          <th>示例</th>
+        </tr>
+        <tr>
+          <td><code>FastAPI()</code></td>
+          <td>创建应用实例</td>
+          <td><code>app = FastAPI(title="...")</code></td>
+        </tr>
+        <tr>
+          <td><code>@app.get(path)</code></td>
+          <td>注册 GET 路由</td>
+          <td><code>@app.get("/items")</code></td>
+        </tr>
+        <tr>
+          <td><code>@app.post(path)</code></td>
+          <td>注册 POST 路由</td>
+          <td><code>@app.post("/items")</code></td>
+        </tr>
+        <tr>
+          <td><code>@app.put(path)</code></td>
+          <td>注册 PUT 路由</td>
+          <td><code>@app.put("/items/{id}")</code></td>
+        </tr>
+        <tr>
+          <td><code>@app.delete(path)</code></td>
+          <td>注册 DELETE 路由</td>
+          <td><code>@app.delete("/items/{id}")</code></td>
+        </tr>
+        <tr>
+          <td><code>{param}: type</code></td>
+          <td>路径参数 + 类型校验</td>
+          <td><code>item_id: int</code></td>
+        </tr>
+        <tr>
+          <td><code>uvicorn file:app --reload</code></td>
+          <td>开发模式启动</td>
+          <td><code>uvicorn main:app --reload</code></td>
+        </tr>
+      </table>
+    </div>
+  </div><!-- /lesson-1 -->
+
+  <!-- ───────── 第 2 课 ───────── -->
+  <div id="lesson-2">
+    <div class="lesson-banner lesson-2">
+      <div class="lesson-num">第 2 课</div>
+      路径参数 Path Parameters
+    </div>
+
+    <div class="lesson-section" id="l2-concept">
+      <h3>路径参数基础</h3>
+      <p>用 <code>{param}</code> 在路径里声明参数，函数签名里同名接收，类型提示自动完成转换和校验。</p>
+<pre><code><span class="de">@app.get</span>(<span class="st">"/users/{user_id}"</span>)
+<span class="kw">def</span> <span class="fn">get_user</span>(user_id: <span class="tp">int</span>):
+    <span class="kw">return</span> {<span class="st">"user_id"</span>: user_id}
+
+<span class="cm"># GET /users/42   → {"user_id": 42}   ✓</span>
+<span class="cm"># GET /users/abc  → 422 自动报错     ✓</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l2-order">
+      <h3>路由顺序陷阱</h3>
+      <div class="warn"><strong>陷阱：</strong>固定路径必须注册在变量路径之前，否则固定值会被当成变量参数！</div>
+<pre><code><span class="cm"># ✓ 正确：固定路径写前面</span>
+<span class="de">@app.get</span>(<span class="st">"/users/me"</span>)
+<span class="kw">def</span> <span class="fn">get_current_user</span>(): ...
+
+<span class="de">@app.get</span>(<span class="st">"/users/{user_id}"</span>)
+<span class="kw">def</span> <span class="fn">get_user</span>(user_id: <span class="tp">int</span>): ...</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l2-enum">
+      <h3>Enum 限制合法值</h3>
+<pre><code><span class="kw">from</span> enum <span class="kw">import</span> Enum
+
+<span class="kw">class</span> <span class="tp">ModelName</span>(str, Enum):
+    alexnet = <span class="st">"alexnet"</span>
+    resnet  = <span class="st">"resnet"</span>
+    lenet   = <span class="st">"lenet"</span>
+
+<span class="de">@app.get</span>(<span class="st">"/models/{model_name}"</span>)
+<span class="kw">def</span> <span class="fn">get_model</span>(model_name: <span class="tp">ModelName</span>):
+    <span class="kw">return</span> {<span class="st">"model"</span>: model_name.value}
+
+<span class="cm"># GET /models/vgg → 422（不在 Enum 里）</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l2-path">
+      <h3>path 类型：参数含斜杠</h3>
+<pre><code><span class="cm"># {file_path:path} 让参数可以包含 /</span>
+<span class="de">@app.get</span>(<span class="st">"/files/{file_path:path}"</span>)
+<span class="kw">def</span> <span class="fn">read_file</span>(file_path: <span class="tp">str</span>):
+    <span class="kw">return</span> {<span class="st">"path"</span>: file_path}
+
+<span class="cm"># GET /files/home/user/a.txt → {"path":"home/user/a.txt"}</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l2-api">
+      <h3>API 速查</h3>
+      <table class="api-table">
+        <tr><th>写法</th><th>说明</th></tr>
+        <tr><td><code>{item_id}</code></td><td>声明路径参数</td></tr>
+        <tr><td><code>item_id: int</code></td><td>自动类型校验转换</td></tr>
+        <tr><td><code>class X(str, Enum)</code></td><td>限制合法值</td></tr>
+        <tr><td><code>{path:path}</code></td><td>参数可含斜杠</td></tr>
+        <tr><td>固定路由写前面</td><td>避免被变量路由吃掉</td></tr>
+      </table>
+      <div class="knowledge-grid" style="margin-top:14px">
+        <div class="knowledge-item"><span class="star">★</span>类型提示是运行时校验，不只是注释</div>
+        <div class="knowledge-item"><span class="star">★</span>Enum 参数：合法值即文档，非法值即错误</div>
+        <div class="knowledge-item"><span class="star">★</span>注册顺序 = 匹配优先级</div>
+      </div>
+    </div>
+  </div><!-- /lesson-2 -->
+
+  <!-- ───────── 第 3 课 ───────── -->
+  <div id="lesson-3">
+    <div class="lesson-banner lesson-3">
+      <div class="lesson-num">第 3 课</div>
+      查询参数 Query Parameters
+    </div>
+
+    <div class="lesson-section" id="l3-basic">
+      <h3>查询参数基础</h3>
+      <p>函数参数不在路径里 → 自动成为查询参数（<code>?key=value</code>）</p>
+<pre><code><span class="de">@app.get</span>(<span class="st">"/items"</span>)
+<span class="kw">def</span> <span class="fn">list_items</span>(skip: <span class="tp">int</span> = <span class="nu">0</span>, limit: <span class="tp">int</span> = <span class="nu">10</span>):
+    <span class="kw">return</span> items[skip: skip + limit]
+
+<span class="cm"># GET /items           → skip=0, limit=10</span>
+<span class="cm"># GET /items?skip=20   → skip=20, limit=10</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l3-optional">
+      <h3>可选参数与必填参数</h3>
+<pre><code><span class="kw">from</span> typing <span class="kw">import</span> Optional
+
+<span class="de">@app.get</span>(<span class="st">"/items/{item_id}"</span>)
+<span class="kw">def</span> <span class="fn">get_item</span>(item_id: <span class="tp">int</span>, q: Optional[<span class="tp">str</span>] = <span class="kw">None</span>):
+    <span class="cm"># q 可选：传 ?q=hello 则有值，不传则 None</span>
+    <span class="kw">return</span> {<span class="st">"id"</span>: item_id, <span class="st">"q"</span>: q}
+
+<span class="de">@app.get</span>(<span class="st">"/search"</span>)
+<span class="kw">def</span> <span class="fn">search</span>(keyword: <span class="tp">str</span>):  <span class="cm"># 无默认值 = 必填</span>
+    <span class="kw">return</span> {<span class="st">"keyword"</span>: keyword}
+<span class="cm"># GET /search            → 422（keyword 必填）</span>
+<span class="cm"># GET /search?keyword=hi → 正常</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l3-bool">
+      <h3>bool 类型自动转换</h3>
+<pre><code><span class="de">@app.get</span>(<span class="st">"/items/{item_id}"</span>)
+<span class="kw">def</span> <span class="fn">get_item</span>(item_id: <span class="tp">int</span>, short: <span class="tp">bool</span> = <span class="kw">False</span>):
+    <span class="kw">return</span> item_id
+
+<span class="cm"># ?short=1     → True</span>
+<span class="cm"># ?short=true  → True</span>
+<span class="cm"># ?short=on    → True</span>
+<span class="cm"># ?short=yes   → True</span>
+<span class="cm"># ?short=false → False（大小写不敏感）</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l3-query">
+      <h3>Query() 添加约束</h3>
+<pre><code><span class="kw">from</span> typing <span class="kw">import</span> Annotated
+<span class="kw">from</span> fastapi <span class="kw">import</span> Query
+
+<span class="de">@app.get</span>(<span class="st">"/search"</span>)
+<span class="kw">def</span> <span class="fn">search</span>(
+    q: Annotated[Optional[<span class="tp">str</span>], <span class="fn">Query</span>(min_length=<span class="nu">2</span>, max_length=<span class="nu">50</span>)] = <span class="kw">None</span>,
+    page: Annotated[<span class="tp">int</span>, <span class="fn">Query</span>(ge=<span class="nu">1</span>, description=<span class="st">"页码"</span>)] = <span class="nu">1</span>,
+):
+    <span class="kw">return</span> {<span class="st">"q"</span>: q, <span class="st">"page"</span>: page}</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l3-api">
+      <h3>API 速查</h3>
+      <table class="api-table">
+        <tr><th>写法</th><th>说明</th></tr>
+        <tr><td><code>param: int = 0</code></td><td>可选参数，默认值 0</td></tr>
+        <tr><td><code>param: str</code></td><td>必填参数（无默认值）</td></tr>
+        <tr><td><code>Optional[str] = None</code></td><td>可为 None 的可选参数</td></tr>
+        <tr><td><code>param: bool = False</code></td><td>bool 自动转换 1/true/on/yes</td></tr>
+        <tr><td><code>Query(ge=1, le=100)</code></td><td>添加范围约束</td></tr>
+      </table>
+      <div class="knowledge-grid" style="margin-top:14px">
+        <div class="knowledge-item"><span class="star">★</span>区分三种参数：路径参数 / 查询参数 / 请求体</div>
+        <div class="knowledge-item"><span class="star">★</span>bool 转换不区分大小写，1/true/on/yes 都是 True</div>
+        <div class="knowledge-item"><span class="star">★</span>Query() 约束写在 Annotated 里，类型与约束分离更清晰</div>
+      </div>
+    </div>
+  </div><!-- /lesson-3 -->
+
+  <!-- ───────── 第 4 课 ───────── -->
+  <div id="lesson-4">
+    <div class="lesson-banner lesson-4">
+      <div class="lesson-num">第 4 课</div>
+      请求体 + Pydantic 数据模型
+    </div>
+
+    <div class="lesson-section" id="l4-model">
+      <h3>BaseModel 定义请求体</h3>
+      <p>继承 <code>BaseModel</code> 定义结构，函数参数类型是 BaseModel 子类时，FastAPI 自动从 request body 读取。</p>
+<pre><code><span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel
+<span class="kw">from</span> typing <span class="kw">import</span> Optional
+
+<span class="kw">class</span> <span class="tp">Item</span>(BaseModel):
+    name: <span class="tp">str</span>            <span class="cm"># 必填</span>
+    price: <span class="tp">float</span>         <span class="cm"># 必填</span>
+    tax: Optional[<span class="tp">float</span>] = <span class="kw">None</span>   <span class="cm"># 可选</span>
+
+<span class="de">@app.post</span>(<span class="st">"/items"</span>)
+<span class="kw">def</span> <span class="fn">create_item</span>(item: <span class="tp">Item</span>):
+    <span class="kw">return</span> item.model_dump()</code></pre>
+      <div class="tip">请求时需设置 <code>Content-Type: application/json</code>，body 是 JSON 格式。</div>
+    </div>
+
+    <div class="lesson-section" id="l4-field">
+      <h3>Field() 添加验证约束</h3>
+<pre><code><span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel, Field
+
+<span class="kw">class</span> <span class="tp">Item</span>(BaseModel):
+    name: <span class="tp">str</span> = <span class="fn">Field</span>(min_length=<span class="nu">1</span>, max_length=<span class="nu">100</span>)
+    price: <span class="tp">float</span> = <span class="fn">Field</span>(gt=<span class="nu">0</span>, description=<span class="st">"价格大于0"</span>)
+    stock: <span class="tp">int</span> = <span class="fn">Field</span>(ge=<span class="nu">0</span>, default=<span class="nu">0</span>)
+
+<span class="cm"># gt  = greater than（严格大于）</span>
+<span class="cm"># ge  = greater than or equal（大于等于）</span>
+<span class="cm"># lt  = less than / le = less than or equal</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l4-nested">
+      <h3>嵌套模型</h3>
+<pre><code><span class="kw">class</span> <span class="tp">Image</span>(BaseModel):
+    url: <span class="tp">str</span>
+    name: <span class="tp">str</span>
+
+<span class="kw">class</span> <span class="tp">Item</span>(BaseModel):
+    name: <span class="tp">str</span>
+    image: Optional[<span class="tp">Image</span>] = <span class="kw">None</span>   <span class="cm"># 嵌套另一个模型</span>
+    tags: list[<span class="tp">str</span>] = []            <span class="cm"># 列表字段</span>
+
+<span class="cm"># 请求体：{"name":"Phone","image":{"url":"...","name":"front"}}</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l4-mixed">
+      <h3>三种参数同时使用</h3>
+      <div class="flow-box">FastAPI 区分参数来源的规则：
+  路径里有 {xxx}     → 路径参数
+  参数类型是 BaseModel → 请求体（从 body 读）
+  其他                → 查询参数（从 URL ?key=val 读）
+
+@app.put("/items/{item_id}")
+def update(item_id: int,   ← 路径参数
+           item: Item,     ← 请求体
+           q: str = None): ← 查询参数</div>
+    </div>
+
+    <div class="lesson-section" id="l4-api">
+      <h3>API 速查</h3>
+      <table class="api-table">
+        <tr><th>写法</th><th>说明</th></tr>
+        <tr><td><code>class X(BaseModel)</code></td><td>定义请求体结构</td></tr>
+        <tr><td><code>Field(gt=0)</code></td><td>添加数值约束</td></tr>
+        <tr><td><code>Field(min_length=1)</code></td><td>添加字符串长度约束</td></tr>
+        <tr><td><code>item.model_dump()</code></td><td>Pydantic 对象转 dict</td></tr>
+        <tr><td><code>Optional[X] = None</code></td><td>可选字段</td></tr>
+      </table>
+    </div>
+  </div><!-- /lesson-4 -->
+
+  <!-- ───────── 第 5 课 ───────── -->
+  <div id="lesson-5">
+    <div class="lesson-banner lesson-5">
+      <div class="lesson-num">第 5 课</div>
+      响应模型 Response Model
+    </div>
+
+    <div class="lesson-section" id="l5-filter">
+      <h3>过滤敏感字段</h3>
+      <p><code>response_model</code> 参数控制返回给客户端的字段，即使函数返回了多余的字段也会被过滤。</p>
+<pre><code><span class="kw">class</span> <span class="tp">UserIn</span>(BaseModel):
+    username: <span class="tp">str</span>;  password: <span class="tp">str</span>;  email: <span class="tp">str</span>
+
+<span class="kw">class</span> <span class="tp">UserOut</span>(BaseModel):
+    username: <span class="tp">str</span>;  email: <span class="tp">str</span>   <span class="cm"># 不含 password</span>
+
+<span class="cm"># response_model=UserOut 确保 password 不出现在响应里</span>
+<span class="de">@app.post</span>(<span class="st">"/users"</span>, response_model=<span class="tp">UserOut</span>, status_code=<span class="nu">201</span>)
+<span class="kw">def</span> <span class="fn">create_user</span>(user: <span class="tp">UserIn</span>):
+    <span class="kw">return</span> user   <span class="cm"># 含 password，但客户端看不到</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l5-unset">
+      <h3>response_model_exclude_unset</h3>
+<pre><code><span class="kw">class</span> <span class="tp">Item</span>(BaseModel):
+    name: <span class="tp">str</span>;  price: <span class="tp">float</span>
+    tax: <span class="tp">float</span> = <span class="nu">10.5</span>   <span class="cm"># 有默认值</span>
+
+<span class="de">@app.get</span>(<span class="st">"/items/{id}"</span>,
+         response_model=<span class="tp">Item</span>,
+         response_model_exclude_unset=<span class="kw">True</span>)
+<span class="kw">def</span> <span class="fn">get_item</span>(id: <span class="tp">int</span>):
+    <span class="kw">return</span> Item(name=<span class="st">"Phone"</span>, price=<span class="nu">999.0</span>)
+    <span class="cm"># 响应：{"name":"Phone","price":999.0}</span>
+    <span class="cm"># tax 没有赋值 → 不返回（即使有默认值）</span></code></pre>
+      <div class="tip"><strong>适用场景：</strong>PATCH 接口响应，避免默认值"污染"返回值。</div>
+    </div>
+
+    <div class="lesson-section" id="l5-status">
+      <h3>响应状态码</h3>
+<pre><code><span class="kw">from</span> fastapi <span class="kw">import</span> status
+
+<span class="de">@app.post</span>(<span class="st">"/items"</span>, status_code=status.HTTP_201_CREATED)
+<span class="kw">def</span> <span class="fn">create</span>(): ...
+
+<span class="de">@app.delete</span>(<span class="st">"/items/{id}"</span>, status_code=status.HTTP_204_NO_CONTENT)
+<span class="kw">def</span> <span class="fn">delete</span>(): ...   <span class="cm"># 204 不能有 response body</span></code></pre>
+      <div class="knowledge-grid" style="margin-top:12px">
+        <div class="knowledge-item">200 OK — 默认</div>
+        <div class="knowledge-item">201 Created — 创建成功</div>
+        <div class="knowledge-item">204 No Content — 删除成功</div>
+        <div class="knowledge-item">422 Unprocessable — 校验失败</div>
+      </div>
+    </div>
+
+    <div class="lesson-section" id="l5-api">
+      <h3>API 速查</h3>
+      <table class="api-table">
+        <tr><th>参数</th><th>说明</th></tr>
+        <tr><td><code>response_model=X</code></td><td>按 X 过滤响应字段</td></tr>
+        <tr><td><code>response_model_exclude_unset=True</code></td><td>只返回实际赋值字段</td></tr>
+        <tr><td><code>response_model_exclude_none=True</code></td><td>排除 None 字段</td></tr>
+        <tr><td><code>status_code=201</code></td><td>设置 HTTP 状态码</td></tr>
+        <tr><td><code>status.HTTP_XXX_YYY</code></td><td>状态码常量（推荐）</td></tr>
+      </table>
+    </div>
+  </div><!-- /lesson-5 -->
+
+  <!-- ───────── 第 6 课 ───────── -->
+  <div id="lesson-6">
+    <div class="lesson-banner lesson-6">
+      <div class="lesson-num">第 6 课</div>
+      错误处理 HTTPException
+    </div>
+
+    <div class="lesson-section" id="l6-http">
+      <h3>HTTPException</h3>
+<pre><code><span class="kw">from</span> fastapi <span class="kw">import</span> HTTPException, status
+
+<span class="de">@app.get</span>(<span class="st">"/items/{item_id}"</span>)
+<span class="kw">def</span> <span class="fn">read_item</span>(item_id: <span class="tp">str</span>):
+    <span class="kw">if</span> item_id <span class="kw">not in</span> db:
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=<span class="st">f"Item '{item_id}' not found"</span>,
+            headers={<span class="st">"X-Error"</span>: <span class="st">"item-not-found"</span>},
+        )
+    <span class="kw">return</span> db[item_id]
+
+<span class="cm"># detail 也可以是 dict（更丰富的错误信息）</span>
+<span class="kw">raise</span> <span class="fn">HTTPException</span>(status_code=<span class="nu">400</span>, detail={
+    <span class="st">"code"</span>: <span class="st">"INVALID_INPUT"</span>,
+    <span class="st">"field"</span>: <span class="st">"price"</span>,
+    <span class="st">"message"</span>: <span class="st">"Price must be positive"</span>
+})</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l6-custom">
+      <h3>自定义异常处理器</h3>
+<pre><code><span class="kw">class</span> <span class="tp">AppError</span>(Exception):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, code: <span class="tp">str</span>, msg: <span class="tp">str</span>):
+        self.code = code; self.msg = msg
+
+<span class="de">@app.exception_handler</span>(<span class="tp">AppError</span>)
+<span class="kw">async def</span> <span class="fn">app_error_handler</span>(request, exc: <span class="tp">AppError</span>):
+    <span class="kw">return</span> <span class="fn">JSONResponse</span>(
+        status_code=<span class="nu">400</span>,
+        content={<span class="st">"code"</span>: exc.code, <span class="st">"message"</span>: exc.msg},
+    )
+
+<span class="de">@app.get</span>(<span class="st">"/test"</span>)
+<span class="kw">def</span> <span class="fn">test</span>():
+    <span class="kw">raise</span> <span class="fn">AppError</span>(<span class="st">"NOT_READY"</span>, <span class="st">"Service not ready"</span>)</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l6-override">
+      <h3>覆盖默认 422 格式</h3>
+<pre><code><span class="kw">from</span> fastapi.exceptions <span class="kw">import</span> RequestValidationError
+
+<span class="de">@app.exception_handler</span>(<span class="tp">RequestValidationError</span>)
+<span class="kw">async def</span> <span class="fn">validation_handler</span>(request, exc):
+    <span class="kw">return</span> <span class="fn">JSONResponse</span>(
+        status_code=<span class="nu">422</span>,
+        content={
+            <span class="st">"code"</span>: <span class="st">"VALIDATION_ERROR"</span>,
+            <span class="st">"errors"</span>: exc.errors(),
+        },
+    )</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l6-api">
+      <h3>API 速查</h3>
+      <table class="api-table">
+        <tr><th>方式</th><th>适用场景</th></tr>
+        <tr><td><code>HTTPException(status, detail)</code></td><td>99% 的业务错误</td></tr>
+        <tr><td><code>@app.exception_handler(ExcClass)</code></td><td>自定义业务异常</td></tr>
+        <tr><td><code>RequestValidationError</code></td><td>覆盖 422 格式</td></tr>
+        <tr><td><code>headers={"X-Error":"..."}</code></td><td>错误附加响应头</td></tr>
+      </table>
+      <div class="knowledge-grid" style="margin-top:14px">
+        <div class="knowledge-item"><span class="star">★</span>detail 可以是 str 或任意 JSON，团队可统一格式</div>
+        <div class="knowledge-item"><span class="star">★</span>自定义异常解耦业务错误与 HTTP 细节</div>
+        <div class="knowledge-item"><span class="star">★</span>status 模块常量比魔法数字更可读</div>
+      </div>
+    </div>
+  </div><!-- /lesson-6 -->
+
+  <!-- ───────── 第 7 课 ───────── -->
+  <div id="lesson-7">
+    <div class="lesson-banner lesson-7">
+      <div class="lesson-num">第 7 课</div>
+      依赖注入 Dependency Injection
+    </div>
+
+    <div class="lesson-section" id="l7-basic">
+      <h3>基础依赖</h3>
+      <p>把公共逻辑抽成依赖函数，多个路由通过 <code>Depends()</code> 复用，避免重复代码。</p>
+<pre><code><span class="kw">from</span> fastapi <span class="kw">import</span> Depends
+<span class="kw">from</span> typing <span class="kw">import</span> Annotated
+
+<span class="kw">def</span> <span class="fn">common_params</span>(skip: <span class="tp">int</span> = <span class="nu">0</span>, limit: <span class="tp">int</span> = <span class="nu">100</span>):
+    <span class="kw">return</span> {<span class="st">"skip"</span>: skip, <span class="st">"limit"</span>: limit}
+
+CommonDeps = Annotated[dict, <span class="fn">Depends</span>(common_params)]
+
+<span class="de">@app.get</span>(<span class="st">"/items"</span>)
+<span class="kw">def</span> <span class="fn">list_items</span>(commons: CommonDeps): <span class="kw">return</span> commons
+
+<span class="de">@app.get</span>(<span class="st">"/users"</span>)
+<span class="kw">def</span> <span class="fn">list_users</span>(commons: CommonDeps): <span class="kw">return</span> commons</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l7-class">
+      <h3>类作为依赖</h3>
+<pre><code><span class="kw">class</span> <span class="tp">QueryFilter</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, q: Optional[<span class="tp">str</span>] = <span class="kw">None</span>, skip: <span class="tp">int</span> = <span class="nu">0</span>):
+        self.q = q
+        self.skip = skip
+
+<span class="de">@app.get</span>(<span class="st">"/items"</span>)
+<span class="kw">def</span> <span class="fn">list_items</span>(f: Annotated[<span class="tp">QueryFilter</span>, <span class="fn">Depends</span>(<span class="tp">QueryFilter</span>)]):
+    <span class="kw">return</span> {<span class="st">"q"</span>: f.q, <span class="st">"skip"</span>: f.skip}</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l7-nested">
+      <h3>嵌套依赖 & 路由级依赖</h3>
+<pre><code><span class="kw">def</span> <span class="fn">verify_key</span>(x_key: Annotated[<span class="tp">str</span>, <span class="fn">Header</span>()]):
+    <span class="kw">if</span> x_key != <span class="st">"secret"</span>: <span class="kw">raise</span> <span class="fn">HTTPException</span>(<span class="nu">400</span>)
+
+<span class="cm"># dependencies=[] 只执行副作用，不注入返回值</span>
+<span class="de">@app.get</span>(<span class="st">"/secure"</span>, dependencies=[<span class="fn">Depends</span>(verify_key)])
+<span class="kw">def</span> <span class="fn">secure</span>(): <span class="kw">return</span> {<span class="st">"ok"</span>: <span class="kw">True</span>}</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l7-yield">
+      <h3>yield 依赖：资源生命周期</h3>
+<pre><code><span class="kw">def</span> <span class="fn">get_db</span>():
+    db = SessionLocal()   <span class="cm"># setup：打开连接</span>
+    <span class="kw">try</span>:
+        <span class="kw">yield</span> db           <span class="cm"># 注入路由函数</span>
+    <span class="kw">finally</span>:
+        db.close()         <span class="cm"># teardown：请求结束关闭</span>
+
+<span class="de">@app.get</span>(<span class="st">"/items"</span>)
+<span class="kw">def</span> <span class="fn">items</span>(db: Annotated[Session, <span class="fn">Depends</span>(get_db)]):
+    <span class="kw">return</span> db.query(Item).all()</code></pre>
+      <div class="flow-box">请求开始 → get_db() 执行到 yield → 路由函数执行
+              → 响应发出 → finally db.close() 清理</div>
+    </div>
+
+    <div class="lesson-section" id="l7-api">
+      <h3>API 速查</h3>
+      <table class="api-table">
+        <tr><th>写法</th><th>说明</th></tr>
+        <tr><td><code>Depends(func)</code></td><td>声明依赖，注入返回值</td></tr>
+        <tr><td><code>Annotated[T, Depends(X)]</code></td><td>推荐写法，类型与依赖合并</td></tr>
+        <tr><td><code>dependencies=[Depends(X)]</code></td><td>路由级副作用依赖</td></tr>
+        <tr><td><code>yield</code> 依赖</td><td>管理需要清理的资源</td></tr>
+      </table>
+      <div class="knowledge-grid" style="margin-top:14px">
+        <div class="knowledge-item"><span class="star">★</span>依赖注入是解耦公共逻辑的核心手段</div>
+        <div class="knowledge-item"><span class="star">★</span>相同依赖在一次请求内只执行一次（自动缓存）</div>
+        <div class="knowledge-item"><span class="star">★</span>yield 依赖是数据库会话管理的标准模式</div>
+      </div>
+    </div>
+  </div><!-- /lesson-7 -->
+
+  <!-- ───────── 第 8 课 ───────── -->
+  <div id="lesson-8">
+    <div class="lesson-banner lesson-8">
+      <div class="lesson-num">第 8 课</div>
+      中间件与 CORS
+    </div>
+
+    <div class="lesson-section" id="l8-cors">
+      <h3>CORSMiddleware：解决跨域</h3>
+      <p>CORS（跨源资源共享）：浏览器安全策略，前端域名与 API 域名不同时会被拦截。</p>
+<pre><code><span class="kw">from</span> fastapi.middleware.cors <span class="kw">import</span> CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[<span class="st">"*"</span>],          <span class="cm"># 生产：["https://yourdomain.com"]</span>
+    allow_credentials=<span class="kw">True</span>,
+    allow_methods=[<span class="st">"*"</span>],
+    allow_headers=[<span class="st">"*"</span>],
+)</code></pre>
+      <div class="warn"><strong>生产环境</strong>把 <code>"*"</code> 改为具体域名，避免安全风险。</div>
+    </div>
+
+    <div class="lesson-section" id="l8-custom">
+      <h3>自定义中间件</h3>
+<pre><code><span class="kw">import</span> time
+
+<span class="de">@app.middleware</span>(<span class="st">"http"</span>)
+<span class="kw">async def</span> <span class="fn">add_process_time</span>(request, call_next):
+    start = time.perf_counter()
+    response = <span class="kw">await</span> <span class="fn">call_next</span>(request)  <span class="cm"># 必须 await！</span>
+    elapsed = time.perf_counter() - start
+    response.headers[<span class="st">"X-Process-Time"</span>] = f<span class="st">"{elapsed*1000:.2f}ms"</span>
+    <span class="kw">return</span> response</code></pre>
+      <div class="tip">中间件是 AOP（面向切面编程）思想：日志、认证、限流都适合放在这里，与业务逻辑解耦。</div>
+    </div>
+
+    <div class="lesson-section" id="l8-order">
+      <h3>洋葱模型：执行顺序</h3>
+      <div class="flow-box">最后注册的中间件最先执行（包裹最外层）
+
+请求 →  MW-C → MW-B → MW-A → 路由函数
+响应 ←  MW-C ← MW-B ← MW-A ←（响应往回走）
+
+add_middleware(A)   ← 最先注册，最后执行
+add_middleware(B)
+add_middleware(C)   ← 最后注册，最先执行</div>
+    </div>
+
+    <div class="lesson-section" id="l8-api">
+      <h3>API 速查</h3>
+      <table class="api-table">
+        <tr><th>写法</th><th>说明</th></tr>
+        <tr><td><code>app.add_middleware(X, **kwargs)</code></td><td>注册中间件</td></tr>
+        <tr><td><code>@app.middleware("http")</code></td><td>自定义 HTTP 中间件</td></tr>
+        <tr><td><code>await call_next(request)</code></td><td>传递给下一层（必须 await）</td></tr>
+        <tr><td><code>response.headers["X"]</code></td><td>修改响应头</td></tr>
+        <tr><td><code>CORSMiddleware</code></td><td>解决跨域问题</td></tr>
+      </table>
+    </div>
+  </div><!-- /lesson-8 -->
+
+  <!-- ───────── 第 9 课 ───────── -->
+  <div id="lesson-9">
+    <div class="lesson-banner lesson-9">
+      <div class="lesson-num">第 9 课</div>
+      安全认证 OAuth2 + JWT
+    </div>
+
+    <div class="lesson-section" id="l9-concept">
+      <h3>JWT 原理</h3>
+      <div class="flow-box">JWT 结构：Header.Payload.Signature（Base64 编码）
+
+Header:    {"alg":"HS256","typ":"JWT"}
+Payload:   {"sub":"alice","exp":1234567890}
+Signature: HMACSHA256(header+payload, SECRET_KEY)
+
+特点：
+  ✓ 无状态：服务器不存 Session，靠签名验证
+  ✓ 自包含：payload 里携带用户信息
+  ✗ 无法撤销：token 未过期就一直有效（需配合黑名单）</div>
+    </div>
+
+    <div class="lesson-section" id="l9-password">
+      <h3>密码哈希存储</h3>
+<pre><code><span class="kw">from</span> passlib.context <span class="kw">import</span> CryptContext
+
+pwd_context = <span class="fn">CryptContext</span>(schemes=[<span class="st">"bcrypt"</span>], deprecated=<span class="st">"auto"</span>)
+
+<span class="cm"># 注册时哈希密码存入数据库</span>
+hashed = pwd_context.hash(<span class="st">"mysecret"</span>)
+
+<span class="cm"># 登录时验证（无法反推原始密码）</span>
+is_ok = pwd_context.verify(<span class="st">"mysecret"</span>, hashed)  <span class="cm"># True</span></code></pre>
+      <div class="warn">永远不要存明文密码！即使数据库泄露，bcrypt 哈希也无法反推原始密码。</div>
+    </div>
+
+    <div class="lesson-section" id="l9-token">
+      <h3>Token 生成与验证</h3>
+<pre><code><span class="kw">from</span> jose <span class="kw">import</span> jwt, JWTError
+<span class="kw">from</span> fastapi.security <span class="kw">import</span> OAuth2PasswordBearer
+
+SECRET_KEY = <span class="st">"your-secret"</span>  <span class="cm"># 生产用 secrets.token_hex(32)</span>
+ALGORITHM = <span class="st">"HS256"</span>
+
+oauth2_scheme = <span class="fn">OAuth2PasswordBearer</span>(tokenUrl=<span class="st">"/token"</span>)
+
+<span class="kw">def</span> <span class="fn">create_token</span>(data: dict) -> <span class="tp">str</span>:
+    payload = {**data, <span class="st">"exp"</span>: datetime.now() + timedelta(minutes=<span class="nu">30</span>)}
+    <span class="kw">return</span> jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+<span class="cm"># 登录接口：验证账密 → 返回 JWT</span>
+<span class="de">@app.post</span>(<span class="st">"/token"</span>)
+<span class="kw">async def</span> <span class="fn">login</span>(form: Annotated[OAuth2PasswordRequestForm, <span class="fn">Depends</span>()]):
+    user = authenticate(form.username, form.password)
+    token = <span class="fn">create_token</span>({<span class="st">"sub"</span>: user[<span class="st">"username"</span>]})
+    <span class="kw">return</span> {<span class="st">"access_token"</span>: token, <span class="st">"token_type"</span>: <span class="st">"bearer"</span>}</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l9-protect">
+      <h3>保护路由</h3>
+<pre><code><span class="kw">async def</span> <span class="fn">get_current_user</span>(token: Annotated[<span class="tp">str</span>, <span class="fn">Depends</span>(oauth2_scheme)]):
+    <span class="kw">try</span>:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get(<span class="st">"sub"</span>)
+    <span class="kw">except</span> JWTError:
+        <span class="kw">raise</span> <span class="fn">HTTPException</span>(<span class="nu">401</span>, headers={<span class="st">"WWW-Authenticate"</span>: <span class="st">"Bearer"</span>})
+    <span class="kw">return</span> get_user(username)
+
+<span class="cm"># 只需注入依赖，路由自动受保护</span>
+<span class="de">@app.get</span>(<span class="st">"/me"</span>)
+<span class="kw">async def</span> <span class="fn">me</span>(user: Annotated[dict, <span class="fn">Depends</span>(get_current_user)]):
+    <span class="kw">return</span> user</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l9-api">
+      <h3>API 速查</h3>
+      <table class="api-table">
+        <tr><th>工具</th><th>作用</th><th>安装</th></tr>
+        <tr><td><code>python-jose</code></td><td>JWT 编解码</td><td><code>pip install python-jose[cryptography]</code></td></tr>
+        <tr><td><code>passlib</code></td><td>密码哈希</td><td><code>pip install passlib[bcrypt]</code></td></tr>
+        <tr><td><code>OAuth2PasswordBearer</code></td><td>提取 Bearer token</td><td>fastapi 内置</td></tr>
+        <tr><td><code>OAuth2PasswordRequestForm</code></td><td>登录表单</td><td>fastapi 内置</td></tr>
+      </table>
+      <div class="knowledge-grid" style="margin-top:14px">
+        <div class="knowledge-item"><span class="star">★</span>SECRET_KEY 生产环境必须用环境变量，不能硬编码</div>
+        <div class="knowledge-item"><span class="star">★</span>JWT payload 不要存敏感信息（可被 Base64 解码）</div>
+        <div class="knowledge-item"><span class="star">★</span>/docs 页面 Authorize 按钮由 OAuth2PasswordBearer 自动生成</div>
+      </div>
+    </div>
+  </div><!-- /lesson-9 -->
+
+  <!-- ───────── 第 10 课 ───────── -->
+  <div id="lesson-10">
+    <div class="lesson-banner lesson-10">
+      <div class="lesson-num">第 10 课</div>
+      数据库基础 SQLAlchemy + SQLite
+    </div>
+
+    <div class="lesson-section" id="l10-setup">
+      <h3>连接配置</h3>
+<pre><code><span class="kw">from</span> sqlalchemy <span class="kw">import</span> create_engine
+<span class="kw">from</span> sqlalchemy.orm <span class="kw">import</span> sessionmaker
+
+<span class="cm"># SQLite（开发）；PostgreSQL（生产）只需改 URL</span>
+DATABASE_URL = <span class="st">"sqlite:///./app.db"</span>
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={<span class="st">"check_same_thread"</span>: <span class="kw">False</span>},  <span class="cm"># SQLite 专属</span>
+)
+SessionLocal = sessionmaker(autocommit=<span class="kw">False</span>, autoflush=<span class="kw">False</span>, bind=engine)
+
+<span class="cm"># 切换 PostgreSQL：只改这一行</span>
+<span class="cm"># DATABASE_URL = "postgresql://user:pass@localhost/dbname"</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l10-model">
+      <h3>ORM 模型 vs Pydantic Schema</h3>
+<pre><code><span class="kw">from</span> sqlalchemy.orm <span class="kw">import</span> DeclarativeBase
+<span class="kw">from</span> sqlalchemy <span class="kw">import</span> Column, Integer, String, Float
+
+<span class="kw">class</span> <span class="tp">Base</span>(DeclarativeBase): <span class="kw">pass</span>
+
+<span class="cm"># ORM 模型：对应数据库表</span>
+<span class="kw">class</span> <span class="tp">ItemModel</span>(Base):
+    __tablename__ = <span class="st">"items"</span>
+    id = Column(Integer, primary_key=<span class="kw">True</span>)
+    name = Column(String, nullable=<span class="kw">False</span>)
+    price = Column(Float)
+
+<span class="cm"># Pydantic Schema：对应 API 输入/输出</span>
+<span class="kw">class</span> <span class="tp">ItemResponse</span>(BaseModel):
+    id: <span class="tp">int</span>; name: <span class="tp">str</span>; price: <span class="tp">float</span>
+    <span class="kw">class</span> Config: from_attributes = <span class="kw">True</span>  <span class="cm"># 允许从 ORM 对象构建</span></code></pre>
+      <div class="flow-box">ORM Model  → 数据库操作（增删改查）
+Pydantic   → API 层（序列化、校验、文档）
+两者分离：一个模型只做一件事</div>
+    </div>
+
+    <div class="lesson-section" id="l10-session">
+      <h3>会话管理：yield 依赖</h3>
+<pre><code><span class="kw">def</span> <span class="fn">get_db</span>():
+    db = SessionLocal()
+    <span class="kw">try</span>:
+        <span class="kw">yield</span> db
+    <span class="kw">finally</span>:
+        db.close()
+
+<span class="de">@app.post</span>(<span class="st">"/items"</span>, response_model=ItemResponse, status_code=<span class="nu">201</span>)
+<span class="kw">def</span> <span class="fn">create</span>(item: ItemCreate, db: Session = <span class="fn">Depends</span>(get_db)):
+    db_item = <span class="fn">ItemModel</span>(**item.model_dump())
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)  <span class="cm"># 拿到自增 id</span>
+    <span class="kw">return</span> db_item</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l10-api">
+      <h3>API 速查</h3>
+      <table class="api-table">
+        <tr><th>操作</th><th>SQLAlchemy 写法</th></tr>
+        <tr><td>新增</td><td><code>db.add(obj); db.commit(); db.refresh(obj)</code></td></tr>
+        <tr><td>查全部</td><td><code>db.query(Model).all()</code></td></tr>
+        <tr><td>条件查</td><td><code>db.query(Model).filter(Model.id==1).first()</code></td></tr>
+        <tr><td>分页</td><td><code>.offset(skip).limit(limit)</code></td></tr>
+        <tr><td>删除</td><td><code>db.delete(obj); db.commit()</code></td></tr>
+      </table>
+    </div>
+  </div><!-- /lesson-10 -->
+
+  <!-- ───────── 第 11 课 ───────── -->
+  <div id="lesson-11">
+    <div class="lesson-banner lesson-11">
+      <div class="lesson-num">第 11 课</div>
+      完整 CRUD API
+    </div>
+
+    <div class="lesson-section" id="l11-crud">
+      <h3>CRUD 路由设计</h3>
+      <table class="api-table">
+        <tr><th>操作</th><th>HTTP 方法</th><th>路径</th><th>状态码</th></tr>
+        <tr><td>Create</td><td>POST</td><td>/products</td><td>201</td></tr>
+        <tr><td>Read (list)</td><td>GET</td><td>/products</td><td>200</td></tr>
+        <tr><td>Read (single)</td><td>GET</td><td>/products/{id}</td><td>200</td></tr>
+        <tr><td>Update (全量)</td><td>PUT</td><td>/products/{id}</td><td>200</td></tr>
+        <tr><td>Update (部分)</td><td>PATCH</td><td>/products/{id}</td><td>200</td></tr>
+        <tr><td>Delete</td><td>DELETE</td><td>/products/{id}</td><td>204</td></tr>
+      </table>
+    </div>
+
+    <div class="lesson-section" id="l11-patch">
+      <h3>PATCH 部分更新</h3>
+<pre><code><span class="cm"># PATCH 专用 Schema：所有字段 Optional</span>
+<span class="kw">class</span> <span class="tp">ProductUpdate</span>(BaseModel):
+    name: Optional[<span class="tp">str</span>] = <span class="kw">None</span>
+    price: Optional[<span class="tp">float</span>] = <span class="kw">None</span>
+
+<span class="de">@app.patch</span>(<span class="st">"/products/{id}"</span>)
+<span class="kw">def</span> <span class="fn">patch</span>(id: <span class="tp">int</span>, data: <span class="tp">ProductUpdate</span>, db=<span class="fn">Depends</span>(get_db)):
+    product = get_or_404(id, db)
+    <span class="cm"># exclude_unset=True：只拿客户端实际传的字段</span>
+    <span class="kw">for</span> k, v <span class="kw">in</span> data.model_dump(exclude_unset=<span class="kw">True</span>).items():
+        setattr(product, k, v)
+    db.commit(); db.refresh(product)
+    <span class="kw">return</span> product
+
+<span class="cm"># PATCH {"price":99} → 只改 price，name 保持原值</span>
+<span class="cm"># PUT  {"name":"A","price":99} → 必须传所有字段，全量替换</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l11-soft">
+      <h3>软删除 vs 硬删除</h3>
+<pre><code><span class="cm"># 软删除：标记 is_deleted=True，数据不丢失</span>
+<span class="de">@app.delete</span>(<span class="st">"/products/{id}"</span>, status_code=<span class="nu">204</span>)
+<span class="kw">def</span> <span class="fn">delete</span>(id: <span class="tp">int</span>, db=<span class="fn">Depends</span>(get_db)):
+    product = get_or_404(id, db)
+    product.is_deleted = <span class="kw">True</span>   <span class="cm"># 标记删除</span>
+    db.commit()
+    <span class="cm"># 不调用 db.delete(product)，数据仍在表里</span>
+
+<span class="cm"># 查询时过滤已删除记录</span>
+db.query(Model).filter(Model.is_deleted == <span class="kw">False</span>).all()</code></pre>
+      <div class="knowledge-grid" style="margin-top:14px">
+        <div class="knowledge-item"><span class="star">★</span>PUT 需要完整对象；PATCH 只传变化字段</div>
+        <div class="knowledge-item"><span class="star">★</span>exclude_unset 区分"没传"和"传了 None"</div>
+        <div class="knowledge-item"><span class="star">★</span>软删除保留历史，支持恢复，适合生产环境</div>
+      </div>
+    </div>
+
+    <div class="lesson-section" id="l11-api">
+      <h3>API 速查</h3>
+      <table class="api-table">
+        <tr><th>技巧</th><th>代码</th></tr>
+        <tr><td>公共 404 封装</td><td><code>def get_or_404(id, db) → obj or raise 404</code></td></tr>
+        <tr><td>模糊搜索</td><td><code>.filter(Model.name.ilike(f"%{q}%"))</code></td></tr>
+        <tr><td>分页约束</td><td><code>Query(ge=0), Query(ge=1, le=100)</code></td></tr>
+        <tr><td>部分更新</td><td><code>model_dump(exclude_unset=True)</code></td></tr>
+        <tr><td>软删除标志</td><td><code>Column(Boolean, default=False)</code></td></tr>
+      </table>
+    </div>
+  </div><!-- /lesson-11 -->
+
+  <!-- ───────── 第 12 课 ───────── -->
+  <div id="lesson-12">
+    <div class="lesson-banner lesson-12">
+      <div class="lesson-num">第 12 课</div>
+      关系模型 Relationships
+    </div>
+
+    <div class="lesson-section" id="l12-one2many">
+      <h3>一对多关系</h3>
+<pre><code><span class="kw">from</span> sqlalchemy <span class="kw">import</span> ForeignKey
+<span class="kw">from</span> sqlalchemy.orm <span class="kw">import</span> relationship
+
+<span class="kw">class</span> <span class="tp">User</span>(Base):
+    __tablename__ = <span class="st">"users"</span>
+    id = Column(Integer, primary_key=<span class="kw">True</span>)
+    <span class="cm"># back_populates：建立双向引用</span>
+    posts = relationship(<span class="st">"Post"</span>, back_populates=<span class="st">"author"</span>)
+
+<span class="kw">class</span> <span class="tp">Post</span>(Base):
+    __tablename__ = <span class="st">"posts"</span>
+    id = Column(Integer, primary_key=<span class="kw">True</span>)
+    user_id = Column(Integer, <span class="fn">ForeignKey</span>(<span class="st">"users.id"</span>))   <span class="cm"># 外键</span>
+    author = relationship(<span class="st">"User"</span>, back_populates=<span class="st">"posts"</span>)</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l12-many2many">
+      <h3>多对多关系</h3>
+<pre><code><span class="kw">from</span> sqlalchemy <span class="kw">import</span> Table
+
+<span class="cm"># 关联表（不需要独立 ORM 类）</span>
+post_tag = Table(<span class="st">"post_tags"</span>, Base.metadata,
+    Column(<span class="st">"post_id"</span>, Integer, <span class="fn">ForeignKey</span>(<span class="st">"posts.id"</span>), primary_key=<span class="kw">True</span>),
+    Column(<span class="st">"tag_id"</span>,  Integer, <span class="fn">ForeignKey</span>(<span class="st">"tags.id"</span>),  primary_key=<span class="kw">True</span>),
+)
+
+<span class="kw">class</span> <span class="tp">Post</span>(Base):
+    tags = relationship(<span class="st">"Tag"</span>, secondary=post_tag, back_populates=<span class="st">"posts"</span>)
+
+<span class="kw">class</span> <span class="tp">Tag</span>(Base):
+    posts = relationship(<span class="st">"Post"</span>, secondary=post_tag, back_populates=<span class="st">"tags"</span>)</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l12-n1">
+      <h3>N+1 问题 & joinedload 解法</h3>
+<pre><code><span class="kw">from</span> sqlalchemy.orm <span class="kw">import</span> joinedload
+
+<span class="cm"># 有 N+1 问题（查 10 个 user 会触发 10 条 posts 查询）</span>
+users = db.query(User).all()
+
+<span class="cm"># 用 joinedload：一次 JOIN 查询拿所有数据</span>
+users = (
+    db.query(User)
+    .options(<span class="fn">joinedload</span>(User.posts).<span class="fn">joinedload</span>(Post.tags))
+    .all()
+)</code></pre>
+      <div class="flow-box">N+1 问题：
+  查 User 列表 → 1 条 SQL
+  for user in users:
+      访问 user.posts → 每个 user 触发 1 条 SQL
+  → 1 + N 条 SQL（N=用户数）
+
+joinedload 解法：
+  1 条 SQL（LEFT JOIN）拿所有数据</div>
+    </div>
+
+    <div class="lesson-section" id="l12-api">
+      <h3>API 速查</h3>
+      <table class="api-table">
+        <tr><th>概念</th><th>代码</th></tr>
+        <tr><td>一对多</td><td><code>ForeignKey + relationship(back_populates)</code></td></tr>
+        <tr><td>多对多</td><td><code>Table + relationship(secondary=...)</code></td></tr>
+        <tr><td>避免 N+1</td><td><code>.options(joinedload(Model.rel))</code></td></tr>
+        <tr><td>嵌套 Schema</td><td><code>posts: list[PostResponse] = []</code></td></tr>
+        <tr><td>ORM 转 Pydantic</td><td><code>class Config: from_attributes = True</code></td></tr>
+      </table>
+    </div>
+  </div><!-- /lesson-12 -->
+
+  <!-- ───────── 第 13 课 ───────── -->
+  <div id="lesson-13">
+    <div class="lesson-banner lesson-13">
+      <div class="lesson-num">第 13 课</div>
+      测试 Testing
+    </div>
+
+    <div class="lesson-section" id="l13-client">
+      <h3>TestClient：无需启动服务器</h3>
+<pre><code><span class="kw">from</span> fastapi.testclient <span class="kw">import</span> TestClient
+
+client = <span class="fn">TestClient</span>(app)
+
+<span class="kw">def</span> <span class="fn">test_create</span>():
+    resp = client.post(<span class="st">"/items"</span>, json={<span class="st">"name"</span>:<span class="st">"A"</span>,<span class="st">"price"</span>:<span class="nu">9.9</span>})
+    assert resp.status_code == <span class="nu">201</span>
+    assert resp.json()[<span class="st">"name"</span>] == <span class="st">"A"</span>
+
+<span class="kw">def</span> <span class="fn">test_not_found</span>():
+    resp = client.get(<span class="st">"/items/999"</span>)
+    assert resp.status_code == <span class="nu">404</span>
+
+<span class="cm"># 运行：pytest 13_testing.py -v</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l13-override">
+      <h3>dependency_overrides：替换依赖</h3>
+<pre><code><span class="cm"># 用内存数据库替换生产数据库</span>
+TEST_DB = <span class="st">"sqlite:///:memory:"</span>
+test_engine = create_engine(TEST_DB, connect_args={<span class="st">"check_same_thread"</span>:<span class="kw">False</span>})
+TestSession = sessionmaker(bind=test_engine)
+Base.metadata.create_all(bind=test_engine)
+
+<span class="kw">def</span> <span class="fn">override_db</span>():
+    db = TestSession()
+    <span class="kw">try</span>: <span class="kw">yield</span> db
+    <span class="kw">finally</span>: db.close()
+
+<span class="cm"># 替换！所有用 Depends(get_db) 的路由改用 override_db</span>
+app.dependency_overrides[get_db] = override_db</code></pre>
+      <div class="warn"><strong>必须加 StaticPool！</strong>SQLite 内存库每次新连接都是独立空库。<code>StaticPool</code> 让所有连接共享同一个实例，否则 create_all 建的表和 Session 用的库不是同一个。</div>
+<pre><code><span class="kw">from</span> sqlalchemy.pool <span class="kw">import</span> StaticPool
+test_engine = create_engine(
+    <span class="st">"sqlite:///:memory:"</span>,
+    connect_args={<span class="st">"check_same_thread"</span>: <span class="kw">False</span>},
+    poolclass=StaticPool,   <span class="cm"># ← 关键！</span>
+)</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l13-fixture">
+      <h3>pytest fixture：状态隔离</h3>
+<pre><code><span class="kw">import</span> pytest
+
+<span class="de">@pytest.fixture</span>(autouse=<span class="kw">True</span>)
+<span class="kw">def</span> <span class="fn">setup_db</span>():
+    Base.metadata.create_all(bind=test_engine)  <span class="cm"># 每个测试前建表</span>
+    <span class="kw">yield</span>
+    Base.metadata.drop_all(bind=test_engine)    <span class="cm"># 每个测试后删表</span>
+
+<span class="de">@pytest.fixture</span>
+<span class="kw">def</span> <span class="fn">client</span>():
+    <span class="kw">with</span> <span class="fn">TestClient</span>(app) <span class="kw">as</span> c:
+        <span class="kw">yield</span> c
+
+<span class="kw">def</span> <span class="fn">test_something</span>(client):    <span class="cm"># 自动注入 client fixture</span>
+    ...</code></pre>
+    </div>
+
+    <div class="lesson-section" id="l13-api">
+      <h3>测试速查</h3>
+      <table class="api-table">
+        <tr><th>场景</th><th>代码</th></tr>
+        <tr><td>GET 请求</td><td><code>client.get("/path")</code></td></tr>
+        <tr><td>POST 请求</td><td><code>client.post("/path", json={...})</code></td></tr>
+        <tr><td>带 token</td><td><code>client.get("/", headers={"Authorization":"Bearer xxx"})</code></td></tr>
+        <tr><td>断言状态码</td><td><code>assert resp.status_code == 200</code></td></tr>
+        <tr><td>断言响应体</td><td><code>assert resp.json()["key"] == value</code></td></tr>
+        <tr><td>运行测试</td><td><code>pytest file.py -v</code></td></tr>
+      </table>
+      <div class="knowledge-grid" style="margin-top:14px">
+        <div class="knowledge-item"><span class="star">★</span>dependency_overrides 是 FastAPI 测试的杀手级特性</div>
+        <div class="knowledge-item"><span class="star">★</span>内存数据库保证测试隔离，不污染开发数据</div>
+        <div class="knowledge-item"><span class="star">★</span>autouse=True 的 fixture 自动应用到所有测试</div>
+      </div>
+    </div>
+  </div><!-- /lesson-13 -->
+
+  <!-- ───────── 第 14 课 ───────── -->
+  <div id="lesson-14">
+    <div class="lesson-banner lesson-14">
+      <div class="lesson-num">第 14 课</div>
+      综合项目 —— 任务管理 API
+    </div>
+
+    <div class="lesson-section" id="l14-overview">
+      <h3>项目总览</h3>
+      <p>一个功能完整的任务管理系统，综合运用全部 13 课知识点。</p>
+      <div class="knowledge-grid">
+        <div class="knowledge-item"><strong>任务（Task）</strong><br>标题、描述、状态枚举、创建时间、软删除</div>
+        <div class="knowledge-item"><strong>标签（Tag）</strong><br>多对多关联任务，名称唯一</div>
+        <div class="knowledge-item"><strong>过滤 + 分页</strong><br>按状态、标签名过滤，skip/limit 分页</div>
+        <div class="knowledge-item"><strong>统计接口</strong><br>按状态分组计数，一次聚合查询</div>
+      </div>
+    </div>
+
+    <div class="lesson-section" id="l14-routes">
+      <h3>路由设计</h3>
+      <table class="api-table">
+        <tr><th>方法</th><th>路径</th><th>功能</th></tr>
+        <tr><td>POST</td><td>/tags</td><td>创建标签</td></tr>
+        <tr><td>GET</td><td>/tags</td><td>标签列表</td></tr>
+        <tr><td>DELETE</td><td>/tags/{id}</td><td>删除标签</td></tr>
+        <tr><td>POST</td><td>/tasks</td><td>创建任务（可带标签）</td></tr>
+        <tr><td>GET</td><td>/tasks</td><td>任务列表（过滤+分页）</td></tr>
+        <tr><td>GET</td><td>/tasks/{id}</td><td>任务详情（含标签）</td></tr>
+        <tr><td>PATCH</td><td>/tasks/{id}</td><td>部分更新（可改标签）</td></tr>
+        <tr><td>DELETE</td><td>/tasks/{id}</td><td>软删除</td></tr>
+        <tr><td>GET</td><td>/stats</td><td>按状态统计</td></tr>
+      </table>
+    </div>
+
+    <div class="lesson-section" id="l14-key">
+      <h3>核心实现亮点</h3>
+<pre><code><span class="cm"># 1. Annotated 简化重复依赖声明</span>
+DbDep = Annotated[Session, <span class="fn">Depends</span>(get_db)]
+
+<span class="cm"># 2. 过滤 + 分页 + joinedload 一次搞定</span>
+<span class="de">@app.get</span>(<span class="st">"/tasks"</span>)
+<span class="kw">def</span> <span class="fn">list_tasks</span>(status: Optional[TaskStatus]=<span class="kw">None</span>,
+               tag_name: Optional[<span class="tp">str</span>]=<span class="kw">None</span>,
+               skip: <span class="tp">int</span>=<span class="fn">Query</span>(<span class="nu">0</span>,ge=<span class="nu">0</span>),
+               limit: <span class="tp">int</span>=<span class="fn">Query</span>(<span class="nu">10</span>,ge=<span class="nu">1</span>,le=<span class="nu">100</span>),
+               db: DbDep = <span class="kw">None</span>):
+    query = (db.query(TaskModel)
+             .options(<span class="fn">joinedload</span>(TaskModel.tags))
+             .filter(TaskModel.is_deleted == <span class="kw">False</span>))
+    <span class="kw">if</span> status: query = query.filter(TaskModel.status == status.value)
+    <span class="kw">if</span> tag_name: query = query.join(TaskModel.tags).filter(TagModel.name == tag_name)
+    <span class="kw">return</span> query.offset(skip).limit(limit).all()
+
+<span class="cm"># 3. 统计接口</span>
+<span class="de">@app.get</span>(<span class="st">"/stats"</span>)
+<span class="kw">def</span> <span class="fn">stats</span>(db: DbDep):
+    active = TaskModel.is_deleted == <span class="kw">False</span>
+    <span class="kw">return</span> {s.value: db.query(TaskModel).filter(active,
+        TaskModel.status==s.value).count() <span class="kw">for</span> s <span class="kw">in</span> TaskStatus}</code></pre>
+
+      <p>启动：</p>
+<pre><code>uvicorn 14_final_project:app --reload
+<span class="cm"># 打开 http://127.0.0.1:8000/docs 体验完整 API</span></code></pre>
+    </div>
+
+    <div class="lesson-section" id="l14-summary">
+      <h3>FastAPI 学习总结</h3>
+      <div class="knowledge-grid">
+        <div class="knowledge-item"><span class="star">★</span><strong>第 1-3 课</strong>：路由基础<br>路径/查询/类型校验</div>
+        <div class="knowledge-item"><span class="star">★</span><strong>第 4-5 课</strong>：Pydantic<br>请求体、响应模型</div>
+        <div class="knowledge-item"><span class="star">★</span><strong>第 6-7 课</strong>：进阶特性<br>错误处理、依赖注入</div>
+        <div class="knowledge-item"><span class="star">★</span><strong>第 8-9 课</strong>：生产特性<br>中间件、JWT 认证</div>
+        <div class="knowledge-item"><span class="star">★</span><strong>第 10-12 课</strong>：数据库<br>ORM、CRUD、关系模型</div>
+        <div class="knowledge-item"><span class="star">★</span><strong>第 13-14 课</strong>：工程化<br>测试、综合项目</div>
+      </div>
+      <div class="tip" style="margin-top:16px">
+        <strong>下一步学习方向：</strong>
+        Alembic 数据库迁移 / Docker 部署 / WebSocket / 后台任务（BackgroundTasks）/ 异步数据库（asyncpg）
+      </div>
+    </div>
+  </div><!-- /lesson-14 -->
+
+</main>
+
+<script>
+// ── 手风琴：点击展开/收起 ──
+document.querySelectorAll('.nav-lesson').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.dataset.target;
+    const sub = document.getElementById(targetId);
+    const isOpen = sub.classList.contains('open');
+    // 收起所有
+    document.querySelectorAll('.nav-sub').forEach(s => s.classList.remove('open'));
+    document.querySelectorAll('.nav-lesson').forEach(b => b.classList.remove('open'));
+    // 如果原来是收起状态则展开
+    if (!isOpen) {
+      sub.classList.add('open');
+      btn.classList.add('open');
+    }
+  });
+});
+
+// ── IntersectionObserver：滚动正文时自动高亮对应课程 ──
+const lessons = document.querySelectorAll('[id^="lesson-"]');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const num = entry.target.id.replace('lesson-', '');
+      const targetSub = document.getElementById('nav-sub-' + num);
+      const btn = targetSub ? targetSub.previousElementSibling : null;
+      if (targetSub && !targetSub.classList.contains('open')) {
+        document.querySelectorAll('.nav-sub').forEach(s => s.classList.remove('open'));
+        document.querySelectorAll('.nav-lesson').forEach(b => {
+          b.classList.remove('open');
+          b.classList.remove('active');
+        });
+        targetSub.classList.add('open');
+        if (btn) { btn.classList.add('open'); btn.classList.add('active'); }
+      }
+    }
+  });
+}, { threshold: 0.15 });
+
+lessons.forEach(l => observer.observe(l));
+
+// 默认展开第一课
+const firstSub = document.getElementById('nav-sub-1');
+const firstBtn = firstSub ? firstSub.previousElementSibling : null;
+if (firstSub) { firstSub.classList.add('open'); }
+if (firstBtn) { firstBtn.classList.add('open'); firstBtn.classList.add('active'); }
+</script>
+</body>
+</html>
