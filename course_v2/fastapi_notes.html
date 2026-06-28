@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FastAPI 学习笔记 v2（Java 视角）</title>
+<style>
+  :root {
+    --bg:        #0f172a;   /* 正文背景 */
+    --bg-side:   #111827;   /* 侧栏背景 */
+    --bg-sub:    #0b1220;   /* 子菜单背景 */
+    --bg-card:   #1e293b;   /* 卡片/代码块背景 */
+    --bg-card2:  #172033;   /* 次级卡片 */
+    --fg:        #e2e8f0;   /* 主文字 */
+    --fg-dim:    #94a3b8;   /* 次要文字 */
+    --fg-faint:  #64748b;   /* 更淡 */
+    --border:    #334155;
+    --accent:    #38bdf8;   /* 强调青 */
+    --code-cmt:  #6b8299;   /* 代码注释 */
+    --code-kw:   #c792ea;   /* 关键字 */
+    --code-str:  #c3e88d;   /* 字符串 */
+    --ok:        #34d399;
+    --bad:       #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 25px;
+    line-height: 1.7;
+    display: flex;
+    background: var(--bg);
+    color: var(--fg);
+  }
+
+  /* ── 侧边栏 ── */
+  #sidebar {
+    width: 340px; min-width: 340px;
+    height: 100vh;            /* 固定高度，不用 min-height */
+    overflow-y: auto;         /* 超出可滚动 */
+    background: var(--bg-side);
+    border-right: 1px solid var(--border);
+    position: sticky; top: 0;
+    padding: 18px 0 60px;
+  }
+  #sidebar .title {
+    font-size: 24px; font-weight: 700; color: var(--fg);
+    padding: 0 18px 6px;
+  }
+  #sidebar .sub { font-size: 18px; color: var(--fg-faint); padding: 0 18px 14px;
+                  border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .nav-domain { font-size: 18px; color: var(--fg-faint); letter-spacing: .08em;
+                padding: 16px 18px 6px; text-transform: uppercase; }
+
+  /* 手风琴：每课父条目 */
+  .nav-lesson {
+    padding: 9px 18px; cursor: pointer; display: flex;
+    align-items: center; justify-content: space-between;
+    font-size: 22px; color: var(--fg); transition: background .15s; user-select: none;
+  }
+  .nav-lesson:hover { background: var(--bg-card); }
+  .nav-lesson.active { color: var(--accent); }
+  .nav-lesson .arrow { font-size: 15px; color: var(--fg-faint); transition: transform .25s; }
+  .nav-lesson.open .arrow { transform: rotate(90deg); }
+  .nav-lesson .num { color: var(--fg-faint); font-size: 18px; margin-right: 8px; }
+
+  /* 子标题列表，默认折叠 */
+  .nav-sub { max-height: 0; overflow: hidden; transition: max-height .3s ease; background: var(--bg-sub); }
+  .nav-sub.open { max-height: 480px; }
+  .nav-sub a { display: block; padding: 7px 18px 7px 44px; font-size: 19px;
+               color: var(--fg-dim); text-decoration: none; transition: color .15s; }
+  .nav-sub a:hover { color: var(--accent); }
+
+  /* ── 正文 ── */
+  #content { flex: 1; padding: 40px 60px 120px; max-width: 1280px; }
+  #content > h1 { font-size: 42px; margin-bottom: 6px; }
+  #content > .lead { color: var(--fg-dim); margin-bottom: 12px; }
+  .badge { display:inline-block; font-size:18px; padding:2px 10px; border-radius:20px;
+           background: var(--bg-card); color: var(--accent); border:1px solid var(--border); }
+
+  .domain-head { font-size: 21px; color: var(--fg-faint); letter-spacing:.1em;
+                 text-transform: uppercase; margin: 56px 0 0; border-top:1px dashed var(--border);
+                 padding-top: 24px; }
+
+  /* 每课 banner（按域配色） */
+  .lesson-banner { border-radius: 12px; padding: 16px 22px; margin: 28px 0 22px;
+                   color:#fff; }
+  .lesson-banner .lesson-num { font-size: 19px; font-weight: 400; opacity: .85; margin-bottom: 3px; }
+  .lesson-banner .lesson-title { font-size: 30px; font-weight: 700; }
+  .lesson-banner .lesson-tags { font-size: 18px; opacity: .9; margin-top: 6px; font-weight: 400; }
+  .d01 { background: linear-gradient(135deg,#0ea5e9,#2563eb); }
+  .d02 { background: linear-gradient(135deg,#10b981,#059669); }
+  .d03 { background: linear-gradient(135deg,#f59e0b,#d97706); }
+  .d04 { background: linear-gradient(135deg,#8b5cf6,#7c3aed); }
+  .d05 { background: linear-gradient(135deg,#ec4899,#db2777); }
+  .d06 { background: linear-gradient(135deg,#14b8a6,#0d9488); }
+  .d07 { background: linear-gradient(135deg,#f97316,#ea580c); }
+  .d08 { background: linear-gradient(135deg,#6366f1,#4f46e5); }
+  .d09 { background: linear-gradient(135deg,#0891b2,#0e7490); }
+  .d10 { background: linear-gradient(135deg,#64748b,#475569); }
+
+  h3.blk { font-size: 24px; margin: 22px 0 10px; color: var(--accent);
+           border-left: 3px solid var(--accent); padding-left: 10px; }
+
+  pre { background: var(--bg-card); border:1px solid var(--border); border-radius: 10px;
+        padding: 16px 18px; overflow-x: auto; margin: 10px 0 16px; }
+  code { font-family: "JetBrains Mono","Consolas",monospace; font-size: 20px; line-height: 1.65; }
+  pre .cmt { color: var(--code-cmt); }
+  pre .kw  { color: var(--code-kw); }
+  pre .str { color: var(--code-str); }
+  .inline { background: var(--bg-card); padding: 1px 6px; border-radius: 5px;
+            font-family: "JetBrains Mono",monospace; font-size: 20px; color: #ffd9a0; }
+
+  .flow { background: var(--bg-card2); border:1px solid var(--border); border-radius:10px;
+          padding: 14px 18px; white-space: pre; font-family:"JetBrains Mono",monospace;
+          font-size: 19px; color: var(--fg-dim); overflow-x:auto; margin: 10px 0 16px; }
+
+  /* 知识点格子 */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 16px; }
+  .cell { background: var(--bg-card); border:1px solid var(--border); border-radius:10px; padding: 12px 14px; }
+  .cell .k { color: var(--accent); font-weight:700; font-size: 20px; margin-bottom: 4px; }
+  .cell .v { color: var(--fg-dim); font-size: 20px; }
+  .star { background: var(--bg-card2); border-left: 3px solid var(--ok); border-radius: 0 8px 8px 0;
+          padding: 12px 16px; margin: 6px 0; color: var(--fg); font-size: 22px; }
+
+  /* 对照/速查表 */
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 16px; font-size: 21px; }
+  th, td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+  th { background: var(--bg-card); color: var(--accent); }
+  td { color: var(--fg-dim); }
+  td .inline { font-size: 19px; }
+  .tag-ok  { color: var(--ok); }
+  .tag-bad { color: var(--bad); }
+</style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="title">FastAPI 学习笔记 v2</div>
+  <div class="sub">Java / SpringBoot 视角 · 暗色护眼</div>
+
+  <!-- ===== nav：域 01 ===== -->
+  <div class="nav-domain">01 基础</div>
+  <div class="nav-lesson" data-target="L01-01">
+    <span><span class="num">01</span>Hello FastAPI</span><span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub">
+    <a href="#L01-01">知识点 + SpringBoot 类比</a>
+    <a href="#L01-01-flow">执行流程图</a>
+    <a href="#L01-01-star">核心规律</a>
+  </div>
+  <div class="nav-lesson" data-target="L01-02">
+    <span><span class="num">02</span>async vs sync</span><span class="arrow">▶</span>
+  </div>
+  <div class="nav-sub">
+    <a href="#L01-02">为什么异步是灵魂</a>
+    <a href="#L01-02-flow">执行流程图</a>
+    <a href="#L01-02-star">核心规律</a>
+  </div>
+
+  <div class="nav-domain">02 请求参数</div>
+  <div class="nav-lesson" data-target="L02-01"><span><span class="num">01</span>路径 + 查询参数</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L02-01">知识点</a><a href="#L02-01-flow">流程图</a><a href="#L02-01-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L02-02"><span><span class="num">02</span>参数进阶</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L02-02">知识点</a><a href="#L02-02-flow">流程图</a><a href="#L02-02-star">核心规律</a></div>
+
+  <div class="nav-domain">03 请求体与 Pydantic</div>
+  <div class="nav-lesson" data-target="L03-01"><span><span class="num">01</span>请求体 + Field + 嵌套</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L03-01">知识点</a><a href="#L03-01-flow">流程图</a><a href="#L03-01-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L03-02"><span><span class="num">02</span>表单与文件上传</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L03-02">知识点</a><a href="#L03-02-flow">流程图</a><a href="#L03-02-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L03-03"><span><span class="num">03</span>自定义校验</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L03-03">知识点</a><a href="#L03-03-flow">流程图</a><a href="#L03-03-star">核心规律</a></div>
+
+  <div class="nav-domain">04 响应</div>
+  <div class="nav-lesson" data-target="L04-01"><span><span class="num">01</span>response_model + 状态码</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L04-01">知识点</a><a href="#L04-01-flow">流程图</a><a href="#L04-01-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L04-02"><span><span class="num">02</span>自定义与流式</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L04-02">知识点</a><a href="#L04-02-flow">流程图</a><a href="#L04-02-star">核心规律</a></div>
+
+  <div class="nav-domain">05 错误处理</div>
+  <div class="nav-lesson" data-target="L05-01"><span><span class="num">01</span>错误处理</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L05-01">知识点</a><a href="#L05-01-flow">流程图</a><a href="#L05-01-star">核心规律</a></div>
+
+  <div class="nav-domain">06 依赖注入</div>
+  <div class="nav-lesson" data-target="L06-01"><span><span class="num">01</span>Depends 基础</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L06-01">知识点</a><a href="#L06-01-flow">流程图</a><a href="#L06-01-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L06-02"><span><span class="num">02</span>yield 依赖</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L06-02">知识点</a><a href="#L06-02-flow">流程图</a><a href="#L06-02-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L06-03"><span><span class="num">03</span>全局依赖</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L06-03">知识点</a><a href="#L06-03-flow">流程图</a><a href="#L06-03-star">核心规律</a></div>
+
+  <div class="nav-domain">07 中间件与后台</div>
+  <div class="nav-lesson" data-target="L07-01"><span><span class="num">01</span>中间件 + CORS</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L07-01">知识点</a><a href="#L07-01-flow">流程图</a><a href="#L07-01-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L07-02"><span><span class="num">02</span>后台任务</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L07-02">知识点</a><a href="#L07-02-flow">流程图</a><a href="#L07-02-star">核心规律</a></div>
+
+  <div class="nav-domain">08 安全认证</div>
+  <div class="nav-lesson" data-target="L08-01"><span><span class="num">01</span>OAuth2 骨架</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L08-01">知识点</a><a href="#L08-01-flow">流程图</a><a href="#L08-01-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L08-02"><span><span class="num">02</span>密码哈希</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L08-02">知识点</a><a href="#L08-02-flow">流程图</a><a href="#L08-02-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L08-03"><span><span class="num">03</span>JWT 令牌</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L08-03">知识点</a><a href="#L08-03-flow">流程图</a><a href="#L08-03-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L08-04"><span><span class="num">04</span>当前用户依赖</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L08-04">知识点</a><a href="#L08-04-flow">流程图</a><a href="#L08-04-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L08-05"><span><span class="num">05</span>权限作用域 Scopes</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L08-05">知识点</a><a href="#L08-05-flow">流程图</a><a href="#L08-05-star">核心规律</a></div>
+
+  <div class="nav-domain">09 数据库 SQLAlchemy</div>
+  <div class="nav-lesson" data-target="L09-01"><span><span class="num">01</span>数据库接入</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L09-01">知识点</a><a href="#L09-01-flow">流程图</a><a href="#L09-01-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L09-02"><span><span class="num">02</span>完整 CRUD</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L09-02">知识点</a><a href="#L09-02-flow">流程图</a><a href="#L09-02-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L09-03"><span><span class="num">03</span>一对多关系</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L09-03">知识点</a><a href="#L09-03-flow">流程图</a><a href="#L09-03-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L09-04"><span><span class="num">04</span>多对多关系</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L09-04">知识点</a><a href="#L09-04-flow">流程图</a><a href="#L09-04-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L09-05"><span><span class="num">05</span>N+1 与急加载</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L09-05">知识点</a><a href="#L09-05-flow">流程图</a><a href="#L09-05-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L09-06"><span><span class="num">06</span>Alembic 迁移</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L09-06">知识点</a><a href="#L09-06-flow">流程图</a><a href="#L09-06-star">核心规律</a></div>
+
+  <div class="nav-domain">10 工程化</div>
+  <div class="nav-lesson" data-target="L10-01"><span><span class="num">01</span>APIRouter 拆分</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L10-01">知识点</a><a href="#L10-01-flow">流程图</a><a href="#L10-01-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L10-02"><span><span class="num">02</span>配置管理</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L10-02">知识点</a><a href="#L10-02-flow">流程图</a><a href="#L10-02-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L10-03"><span><span class="num">03</span>生命周期 lifespan</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L10-03">知识点</a><a href="#L10-03-flow">流程图</a><a href="#L10-03-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L10-04"><span><span class="num">04</span>测试</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L10-04">知识点</a><a href="#L10-04-flow">流程图</a><a href="#L10-04-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L10-05"><span><span class="num">05</span>WebSocket</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L10-05">知识点</a><a href="#L10-05-flow">流程图</a><a href="#L10-05-star">核心规律</a></div>
+  <div class="nav-lesson" data-target="L10-06"><span><span class="num">06</span>综合项目 Todo</span><span class="arrow">▶</span></div>
+  <div class="nav-sub"><a href="#L10-06">知识点</a><a href="#L10-06-flow">流程图</a><a href="#L10-06-star">核心规律</a></div>
+</nav>
+
+<main id="content">
+  <h1>FastAPI 学习笔记 v2 <span class="badge">Java 视角</span></h1>
+  <p class="lead">课程结构即学习路径：10 个概念域，简单点合并、难点细拆，全程用 SpringBoot 类比降低门槛。</p>
+
+  <!-- ============ 域 01 ============ -->
+  <div class="domain-head">域 01 · 基础</div>
+
+  <!-- ---- 01/01 ---- -->
+  <section id="L01-01">
+    <div class="lesson-banner d01">
+      <div class="lesson-num">基础 / 01</div>
+      <div class="lesson-title">Hello FastAPI —— 一次 HTTP 来回的最小闭环</div>
+      <div class="lesson-tags">易点·合并 ｜ 对应 SpringBoot：@RestController + 内嵌 Tomcat + Swagger</div>
+    </div>
+
+    <h3 class="blk">本课知识点 + SpringBoot 类比</h3>
+    <table>
+      <tr><th>FastAPI</th><th>作用</th><th>SpringBoot 对应</th></tr>
+      <tr><td><span class="inline">FastAPI()</span></td><td>创建应用实例</td><td>@SpringBootApplication 启动类</td></tr>
+      <tr><td><span class="inline">@app.get/post</span></td><td>装饰器注册路由</td><td>@GetMapping / @PostMapping</td></tr>
+      <tr><td>返回 dict/list</td><td>自动序列化 JSON</td><td>@RestController + Jackson</td></tr>
+      <tr><td>类型注解</td><td>参数声明的唯一依据</td><td>方法形参 + @RequestParam</td></tr>
+      <tr><td><span class="inline">uvicorn</span></td><td>ASGI 服务器</td><td>内嵌 Tomcat（异步版）</td></tr>
+      <tr><td><span class="inline">/docs</span></td><td>自带交互文档</td><td>Swagger UI（此处免配置）</td></tr>
+    </table>
+
+    <h3 class="blk">代码</h3>
+    <pre><code><span class="kw">from</span> fastapi <span class="kw">import</span> FastAPI
+
+app = FastAPI(title=<span class="str">"FastAPI 学习项目"</span>, version=<span class="str">"0.1.0"</span>)
+
+<span class="cmt"># @app.get("/") 注册为 GET / 的处理器，返回 dict 自动转 JSON</span>
+<span class="kw">@app.get</span>(<span class="str">"/"</span>)
+<span class="kw">def</span> read_root():
+    <span class="kw">return</span> {<span class="str">"message"</span>: <span class="str">"Hello, FastAPI!"</span>}
+
+<span class="cmt"># item_id: int 这个类型注解 → 自动转换+校验，传 /items/abc 直接 422</span>
+<span class="kw">@app.get</span>(<span class="str">"/items/{item_id}"</span>)
+<span class="kw">def</span> read_item(item_id: <span class="kw">int</span>):
+    <span class="kw">return</span> {<span class="str">"item_id"</span>: item_id}</code></pre>
+
+    <div id="L01-01-flow"></div>
+    <h3 class="blk">执行流程图</h3>
+    <div class="flow">客户端 HTTP 请求
+    │
+    ▼
+uvicorn（≈ 内嵌 Tomcat）接收
+    │
+    ▼
+FastAPI 按 (路径 + 方法) 匹配路由
+    │
+    ├─ 匹配成功 → 按类型注解解析/校验参数 → 执行函数 → 返回值自动 JSON → 200
+    │                                        └─ 参数类型不对 → 422（不进函数体）
+    │
+    └─ 匹配失败 → 404
+
+启动：cd course_v2/01_基础 && uvicorn 01_hello_fastapi:app --reload
+文档：http://127.0.0.1:8000/docs</div>
+
+    <div id="L01-01-star"></div>
+    <h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ FastAPI = Starlette（异步框架）+ Pydantic（数据校验 ≈ Bean Validation）</div>
+    <div class="star">★ 装饰器即路由注册；返回 dict/list/模型 → 自动 JSON，无需 @ResponseBody</div>
+    <div class="star">★ 类型注解是理解参数的唯一依据：路径里有同名→路径参数；简单类型没在路径里→查询参数</div>
+    <div class="star">★ <span class="inline">/docs</span> 是免费的交互文档，这是相对 SpringBoot 的最大便利</div>
+  </section>
+
+  <!-- ---- 01/02 ---- -->
+  <section id="L01-02">
+    <div class="lesson-banner d01">
+      <div class="lesson-num">基础 / 02</div>
+      <div class="lesson-title">async def vs def —— 为什么异步是 FastAPI 的灵魂</div>
+      <div class="lesson-tags">难点·细拆 ｜ 无 Java 类比，必须单独搞懂</div>
+    </div>
+
+    <h3 class="blk">一句话区别</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">def 路由</div><div class="v">FastAPI 丢进<b>线程池</b>跑。阻塞也没事，≈ SpringBoot 一请求一线程。</div></div>
+      <div class="cell"><div class="k">async def 路由</div><div class="v">在<b>单线程事件循环</b>里跑。靠 <span class="inline">await</span> 在 IO 等待时让出，服务别的请求。</div></div>
+    </div>
+
+    <h3 class="blk">四种写法对照</h3>
+    <pre><code><span class="cmt"># 1) def：阻塞跑在线程池，安全</span>
+<span class="kw">@app.get</span>(<span class="str">"/sync-sleep"</span>)
+<span class="kw">def</span> sync_sleep():
+    time.sleep(<span class="str">1</span>); <span class="kw">return</span> {...}
+
+<span class="cmt"># 2) async def + await 异步IO：高并发的正确姿势</span>
+<span class="kw">@app.get</span>(<span class="str">"/async-sleep"</span>)
+<span class="kw">async def</span> async_sleep():
+    <span class="kw">await</span> asyncio.sleep(<span class="str">1</span>)   <span class="cmt"># 让出事件循环</span>
+    <span class="kw">return</span> {...}
+
+<span class="cmt"># 3) ✗ 反面教材：async 里写阻塞，霸占循环，拖垮全局并发</span>
+<span class="kw">@app.get</span>(<span class="str">"/async-blocking-BAD"</span>)
+<span class="kw">async def</span> bad():
+    time.sleep(<span class="str">1</span>)            <span class="cmt"># 致命：所有并发请求一起卡住</span>
+    <span class="kw">return</span> {...}</code></pre>
+
+    <div id="L01-02-flow"></div>
+    <h3 class="blk">执行流程图</h3>
+    <div class="flow">                 请求进入 FastAPI
+                      │
+        ┌─────────────┴──────────────┐
+        ▼                            ▼
+   路由是 def                   路由是 async def
+        │                            │
+ 丢进线程池                   在事件循环里跑
+ （阻塞也没事）           ┌─────────┴──────────┐
+        │                ▼                    ▼
+        ▼            await 异步IO         写了阻塞(time.sleep)
+    返回响应       （让出，别的请求继续）   （霸占循环 ✗ 全卡住）</div>
+
+    <h3 class="blk">该用哪个（背下来）</h3>
+    <table>
+      <tr><th>场景</th><th>选择</th></tr>
+      <tr><td>用到 await 接口（httpx / 异步 DB 驱动 / asyncio）</td><td class="tag-ok">async def</td></tr>
+      <tr><td>只有阻塞调用（requests / time.sleep / 同步 SQLAlchemy）</td><td class="tag-ok">普通 def（丢线程池）</td></tr>
+      <tr><td>纯 CPU 计算（大循环 / 图像处理）</td><td class="tag-ok">普通 def（async 救不了 CPU）</td></tr>
+      <tr><td>async def 里调用阻塞代码</td><td class="tag-bad">✗ 头号性能事故</td></tr>
+    </table>
+
+    <div id="L01-02-star"></div>
+    <h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ def → 线程池（Java 直觉，阻塞安全）；async def → 事件循环（高并发但禁止阻塞）</div>
+    <div class="star">★ 高并发来源是 <span class="inline">await</span>：IO 等待时让出循环去服务别人，而不是堆线程</div>
+    <div class="star">★ 头号事故：async def 里调阻塞代码（time.sleep/requests/同步 DB），拖垮全局</div>
+    <div class="star">★ 不确定就用普通 def——FastAPI 安全地丢线程池，绝不会比写错的 async 更糟</div>
+  </section>
+
+  <!-- ============ 域 02 ============ -->
+  <div class="domain-head">域 02 · 请求参数</div>
+
+  <section id="L02-01">
+    <div class="lesson-banner d02"><div class="lesson-num">请求参数 / 01</div><div class="lesson-title">路径参数 + 查询参数</div><div class="lesson-tags">易点·合并 ｜ ≈ @PathVariable + @RequestParam</div></div>
+    <h3 class="blk">知识点 + 类比</h3>
+    <table>
+      <tr><th>FastAPI</th><th>规则</th><th>SpringBoot</th></tr>
+      <tr><td>路径里有同名占位</td><td>路径参数</td><td>@PathVariable</td></tr>
+      <tr><td>简单类型没在路径里</td><td>查询参数</td><td>@RequestParam</td></tr>
+      <tr><td>有默认值 / 无默认值</td><td>可选 / 必填(422)</td><td>required=false / true</td></tr>
+      <tr><td>bool 自动转</td><td>1/true/on/yes → True</td><td>类型转换器</td></tr>
+    </table>
+    <pre><code><span class="kw">@app.get</span>(<span class="str">"/users/{user_id}/orders"</span>)
+<span class="kw">def</span> orders(user_id: <span class="kw">int</span>, status: Optional[<span class="kw">str</span>] = None, page: <span class="kw">int</span> = 1):
+    <span class="cmt"># user_id←路径   status/page←查询串，FastAPI 按"在不在路径"自动分流</span>
+    <span class="kw">return</span> {...}</code></pre>
+    <div id="L02-01-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">GET /users/42/orders?status=paid&page=2
+    user_id ← 路径(必填)   status ← 查询(可选)   page ← 查询(默认1)
+        │  按类型注解转换+校验（user_id="abc" → 422）
+        ▼  执行函数</div>
+    <div id="L02-01-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ 路径里有同名 → 路径参数；简单类型没在路径 → 查询参数</div>
+    <div class="star">★ 有默认值=可选，无默认值=必填（不传 422）；Optional[X]=None 是标准可选写法</div>
+  </section>
+
+  <section id="L02-02">
+    <div class="lesson-banner d02"><div class="lesson-num">请求参数 / 02</div><div class="lesson-title">参数进阶：Enum / 路由顺序 / Query 约束</div><div class="lesson-tags">进阶·合并</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">Enum 限值</div><div class="v">路径/查询参数限定合法取值，/docs 自动下拉</div></div>
+      <div class="cell"><div class="k">路由顺序陷阱</div><div class="v">固定路径必须写在变量路径之前（按声明顺序匹配）</div></div>
+      <div class="cell"><div class="k">Query() 约束</div><div class="v">ge/le/min_length/max_length + description 文档</div></div>
+      <div class="cell"><div class="k">Query(...)</div><div class="v">... 表示必填；给真实默认值则可选</div></div>
+    </div>
+    <pre><code><span class="kw">@app.get</span>(<span class="str">"/users/me"</span>)        <span class="cmt"># 固定路径写前面</span>
+<span class="kw">@app.get</span>(<span class="str">"/users/{user_id}"</span>)  <span class="cmt"># 变量路径写后面，否则 "me" 被当 user_id → 422</span>
+
+keyword: <span class="kw">str</span> = Query(..., min_length=2, description=<span class="str">"2-20字"</span>)</code></pre>
+    <div id="L02-02-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">FastAPI 按"声明顺序"从上往下匹配，先匹配上的赢
+    /users/me 写在 {user_id} 前 → 命中 me   ✓
+    若顺序反了 → "me" 当 user_id → int 转换失败 422  ✗</div>
+    <div id="L02-02-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ 路由顺序陷阱：固定路径写在变量路径之前（不像 Spring 按精确度匹配）</div>
+    <div class="star">★ Query(默认, ge/le/min_length, description) = 校验 + 文档一次写全</div>
+  </section>
+
+  <!-- ============ 域 03 ============ -->
+  <div class="domain-head">域 03 · 请求体与 Pydantic</div>
+
+  <section id="L03-01">
+    <div class="lesson-banner d03"><div class="lesson-num">请求体与Pydantic / 01</div><div class="lesson-title">请求体 + Field 约束 + 嵌套模型</div><div class="lesson-tags">易点·合并 ｜ ≈ DTO + Bean Validation</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">BaseModel 做参数</div><div class="v">自动从 body 读 JSON（≈ @RequestBody），无需注解</div></div>
+      <div class="cell"><div class="k">Field()</div><div class="v">gt/le/min_length + description（≈ @Min/@Size + Swagger）</div></div>
+      <div class="cell"><div class="k">嵌套模型</div><div class="v">字段类型是另一个 BaseModel，递归校验</div></div>
+      <div class="cell"><div class="k">三类共存</div><div class="v">路径/查询/请求体同函数，按来源自动分流</div></div>
+    </div>
+    <pre><code><span class="kw">class</span> UserCreate(BaseModel):
+    name: <span class="kw">str</span> = Field(min_length=1, max_length=50)
+    age: <span class="kw">int</span> = Field(gt=0, le=150)
+    address: Optional[Address] = None   <span class="cmt"># 嵌套模型</span>
+
+<span class="kw">@app.post</span>(<span class="str">"/users"</span>)
+<span class="kw">def</span> create(user: UserCreate): ...   <span class="cmt"># ≈ @RequestBody @Valid</span></code></pre>
+    <div id="L03-01-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">POST body JSON → Pydantic 校验
+    age=200 → 不满足 le=150 → 422（指明字段）
+    全合法 → 反序列化成对象进函数</div>
+    <div id="L03-01-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ BaseModel 子类做参数 → 自动当请求体；Field ≈ Bean Validation + Swagger 一处写全</div>
+    <div class="star">★ 嵌套模型 = DTO 套 DTO，body 就是嵌套 JSON，自动递归校验</div>
+  </section>
+
+  <section id="L03-02">
+    <div class="lesson-banner d03"><div class="lesson-num">请求体与Pydantic / 02</div><div class="lesson-title">表单 Form + 文件上传 UploadFile</div><div class="lesson-tags">≈ MultipartFile</div></div>
+    <h3 class="blk">知识点</h3>
+    <table>
+      <tr><th>方式</th><th>用途</th></tr>
+      <tr><td>Form(...)</td><td>表单字段（非 JSON），OAuth2 登录就用它</td></tr>
+      <tr><td>bytes = File(...)</td><td>小文件，一次读进内存</td></tr>
+      <tr><td>UploadFile</td><td>大文件，流式省内存，有 .filename/.content_type（推荐）</td></tr>
+    </table>
+    <pre><code><span class="kw">@app.post</span>(<span class="str">"/upload"</span>)
+<span class="kw">async def</span> upload(file: UploadFile):
+    content = <span class="kw">await</span> file.read()
+    <span class="kw">return</span> {<span class="str">"filename"</span>: file.filename, <span class="str">"size"</span>: len(content)}</code></pre>
+    <div id="L03-02-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">multipart/form-data
+    ├─ 文本字段 → Form(...)
+    └─ 文件 → UploadFile（流式）/ bytes+File（进内存）
+★ 用 Form/File 必须装 python-multipart，否则启动报错</div>
+    <div id="L03-02-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ 小文件 bytes=File(...)；大文件 UploadFile（推荐，流式，await read()）</div>
+    <div class="star">★ 一个请求里有 Form 就整体按表单解析，不能再混 JSON body</div>
+  </section>
+
+  <section id="L03-03">
+    <div class="lesson-banner d03"><div class="lesson-num">请求体与Pydantic / 03</div><div class="lesson-title">自定义校验 field_validator / model_validator</div><div class="lesson-tags">进阶</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">field_validator</div><div class="v">单字段自定义校验/转换（≈ 自定义 ConstraintValidator）</div></div>
+      <div class="cell"><div class="k">model_validator(after)</div><div class="v">跨字段校验，如两次密码一致</div></div>
+    </div>
+    <pre><code><span class="kw">@field_validator</span>(<span class="str">"password"</span>)
+<span class="kw">def</span> strength(cls, v):
+    <span class="kw">if</span> len(v) &lt; 6: <span class="kw">raise</span> ValueError(<span class="str">"至少6位"</span>)  <span class="cmt"># → 422</span>
+    <span class="kw">return</span> v
+
+<span class="kw">@model_validator</span>(mode=<span class="str">"after"</span>)
+<span class="kw">def</span> match(self):
+    <span class="kw">if</span> self.password != self.password2: <span class="kw">raise</span> ValueError(<span class="str">"不一致"</span>)</code></pre>
+    <div id="L03-03-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">校验顺序：Field 约束 → field_validator(逐字段,可改值) → model_validator(跨字段)
+    任一步 raise ValueError → 422</div>
+    <div id="L03-03-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ 能用 Field 表达的就别写校验器；跨字段校验用 model_validator(after)</div>
+    <div class="star">★ 校验失败统一 raise ValueError，FastAPI 自动包成 422（Pydantic v2 写法）</div>
+  </section>
+
+  <!-- ============ 域 04 ============ -->
+  <div class="domain-head">域 04 · 响应</div>
+
+  <section id="L04-01">
+    <div class="lesson-banner d04"><div class="lesson-num">响应 / 01</div><div class="lesson-title">response_model + 状态码 status_code</div><div class="lesson-tags">易点·合并 ｜ ≈ 返回 DTO + @ResponseStatus</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">response_model</div><div class="v">出参契约，自动过滤多余字段（密码不在模子→丢弃）</div></div>
+      <div class="cell"><div class="k">XxxIn / XxxOut</div><div class="v">分离请求/响应模型，密码只进不出</div></div>
+      <div class="cell"><div class="k">status_code</div><div class="v">201 Created / 204 No Content</div></div>
+      <div class="cell"><div class="k">exclude_unset</div><div class="v">只返回赋过值的字段，适合 PATCH</div></div>
+    </div>
+    <pre><code><span class="kw">@app.post</span>(<span class="str">"/users"</span>, response_model=UserOut, status_code=201)
+<span class="kw">def</span> create(user: UserIn):
+    <span class="kw">return</span> user   <span class="cmt"># 即便含 password，UserOut 没这字段 → 不泄露</span></code></pre>
+    <div id="L04-01-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">函数 return 对象(字段多,含敏感)
+    → response_model 当出参模子过滤(只留声明字段)
+    → exclude_unset 再丢未赋值字段
+    → 带 status_code 序列化返回</div>
+    <div id="L04-01-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ response_model 是"出参契约"：函数返回多余字段会被自动过滤，天然防泄露</div>
+    <div class="star">★ 输入 XxxIn、输出 XxxOut 分离；密码只进不出</div>
+  </section>
+
+  <section id="L04-02">
+    <div class="lesson-banner d04"><div class="lesson-num">响应 / 02</div><div class="lesson-title">自定义 Response / 多形态 / 流式</div><div class="lesson-tags">进阶·合并</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">JSONResponse</div><div class="v">自定义状态码/响应头（≈ ResponseEntity）</div></div>
+      <div class="cell"><div class="k">Union[A,B]</div><div class="v">允许返回多种结构</div></div>
+      <div class="cell"><div class="k">StreamingResponse</div><div class="v">边 yield 边发，大文件/SSE/AI 打字机</div></div>
+    </div>
+    <pre><code><span class="kw">async def</span> gen():
+    <span class="kw">for</span> i <span class="kw">in</span> range(5):
+        <span class="kw">yield</span> f<span class="str">"data: {i}\n\n"</span>
+        <span class="kw">await</span> asyncio.sleep(0.3)   <span class="cmt"># 异步，不阻塞循环</span>
+<span class="kw">return</span> StreamingResponse(gen(), media_type=<span class="str">"text/event-stream"</span>)</code></pre>
+    <div id="L04-02-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">普通 dict/模型 → 默认 JSONResponse
+要控状态码/头 → 直接返回 JSONResponse
+要边算边发 → StreamingResponse(生成器) → 客户端逐块收</div>
+    <div id="L04-02-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ 要控状态码/响应头就直接返回 JSONResponse；多结构用 Union[A,B]</div>
+    <div class="star">★ StreamingResponse 接生成器，流式里用 async + await，别用阻塞 sleep</div>
+  </section>
+
+  <!-- ============ 域 05 ============ -->
+  <div class="domain-head">域 05 · 错误处理</div>
+
+  <section id="L05-01">
+    <div class="lesson-banner d05"><div class="lesson-num">错误处理 / 01</div><div class="lesson-title">HTTPException + 自定义处理器 + 校验错误</div><div class="lesson-tags">易点·合并 ｜ ≈ @ControllerAdvice</div></div>
+    <h3 class="blk">知识点</h3>
+    <table>
+      <tr><th>机制</th><th>用途</th><th>SpringBoot</th></tr>
+      <tr><td>HTTPException</td><td>就地抛标准错误(404/400)</td><td>ResponseStatusException</td></tr>
+      <tr><td>@app.exception_handler</td><td>全局处理某类异常</td><td>@ControllerAdvice</td></tr>
+      <tr><td>RequestValidationError</td><td>自定义 422 格式</td><td>MethodArgumentNotValid 处理</td></tr>
+    </table>
+    <pre><code><span class="kw">raise</span> HTTPException(404, f<span class="str">"item {id} 不存在"</span>, headers={...})
+
+<span class="kw">@app.exception_handler</span>(BusinessError)
+<span class="kw">def</span> handle(req, exc):
+    <span class="kw">return</span> JSONResponse(400, {<span class="str">"code"</span>: exc.code, <span class="str">"message"</span>: exc.msg})</code></pre>
+    <div id="L05-01-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">路由抛异常
+    ├─ HTTPException(404)        → 内置处理 → 标准错误 JSON
+    ├─ BusinessError            → @exception_handler → 自定义结构
+    └─ 参数校验失败             → RequestValidationError handler → 统一 422</div>
+    <div id="L05-01-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ HTTPException 就地抛（≈ ResponseStatusException）；exception_handler 全局兜底（≈ @ControllerAdvice）</div>
+    <div class="star">★ 自定义业务异常 + 全局 handler = 业务码与 HTTP 解耦；别用 200+error 表达错误</div>
+  </section>
+
+  <!-- ============ 域 06 ============ -->
+  <div class="domain-head">域 06 · 依赖注入</div>
+
+  <section id="L06-01">
+    <div class="lesson-banner d06"><div class="lesson-num">依赖注入 / 01</div><div class="lesson-title">Depends 基础：函数 / 类 / 嵌套依赖</div><div class="lesson-tags">易点·合并 ｜ ≈ @Autowired</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">Depends(fn)</div><div class="v">注入 fn 返回值（≈ @Autowired），横切逻辑复用</div></div>
+      <div class="cell"><div class="k">依赖也有参数</div><div class="v">递归解析整棵依赖树</div></div>
+      <div class="cell"><div class="k">类依赖</div><div class="v">参数放 __init__（≈ 构造器注入）</div></div>
+      <div class="cell"><div class="k">嵌套依赖</div><div class="v">依赖依赖别的依赖</div></div>
+    </div>
+    <pre><code><span class="kw">def</span> pagination(page: <span class="kw">int</span> = 1, size: <span class="kw">int</span> = 10): <span class="kw">return</span> {...}
+PageDep = Annotated[<span class="kw">dict</span>, Depends(pagination)]
+
+<span class="kw">@app.get</span>(<span class="str">"/items"</span>)
+<span class="kw">def</span> list_items(page: PageDep): ...   <span class="cmt"># 多路由复用同一依赖</span></code></pre>
+    <div id="L06-01-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">请求 → 解析依赖树(自底向上)
+    get_token → verify_token → 路由函数
+    每层可有自己的请求参数，FastAPI 递归解析</div>
+    <div id="L06-01-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ Depends(fn) 注入返回值（≈ @Autowired），把横切逻辑抽出复用</div>
+    <div class="star">★ Annotated[类型, Depends(fn)] 现代写法，可起别名到处复用</div>
+  </section>
+
+  <section id="L06-02">
+    <div class="lesson-banner d06"><div class="lesson-num">依赖注入 / 02</div><div class="lesson-title">yield 依赖：资源的打开→使用→关闭</div><div class="lesson-tags">难点·细拆 ｜ 无 Java 直接类比</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">yield 前 / 后</div><div class="v">前=准备资源，后=释放资源</div></div>
+      <div class="cell"><div class="k">收尾时机</div><div class="v">yield 后的代码在"响应返回之后"执行</div></div>
+      <div class="cell"><div class="k">try/finally</div><div class="v">路由抛异常也保证释放（≈ try-with-resources）</div></div>
+    </div>
+    <pre><code><span class="kw">def</span> get_session():
+    session = FakeSession()
+    <span class="kw">try</span>:
+        <span class="kw">yield</span> session     <span class="cmt"># 注入给路由，函数在此暂停</span>
+    <span class="kw">finally</span>:
+        session.close()   <span class="cmt"># 响应返回后从这里恢复，关资源</span></code></pre>
+    <div id="L06-02-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">请求 → get_session 执行到 yield(打开会话,交给路由)
+    → 路由用 session → 返回响应
+    → 响应发出后从 yield 恢复 → finally 关闭会话
+抛异常时：路由 raise → finally 仍关闭 → 再向上抛</div>
+    <div id="L06-02-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ yield 依赖 = 资源生命周期管理：yield 前准备、yield 后释放（≈ try-with-resources）</div>
+    <div class="star">★ 这就是数据库 get_db 的标准范式，〔09/01〕直接用它</div>
+  </section>
+
+  <section id="L06-03">
+    <div class="lesson-banner d06"><div class="lesson-num">依赖注入 / 03</div><div class="lesson-title">路由组依赖 / 全局依赖</div><div class="lesson-tags">进阶 ｜ ≈ 拦截器</div></div>
+    <h3 class="blk">知识点</h3>
+    <table>
+      <tr><th>层级</th><th>范围</th><th>SpringBoot</th></tr>
+      <tr><td>FastAPI(dependencies=[])</td><td>全局所有路由</td><td>全局 Filter</td></tr>
+      <tr><td>APIRouter(dependencies=[])</td><td>一组路由</td><td>Controller 级拦截器</td></tr>
+      <tr><td>@app.get(dependencies=[])</td><td>单个路由</td><td>方法级</td></tr>
+    </table>
+    <pre><code><span class="kw">def</span> verify_api_key(x_api_key: <span class="kw">str</span> = Header(...)):
+    <span class="kw">if</span> x_api_key != <span class="str">"secret"</span>: <span class="kw">raise</span> HTTPException(401)
+    <span class="cmt"># 无 return：纯校验，失败就拦下</span>
+app = FastAPI(dependencies=[Depends(verify_api_key)])</code></pre>
+    <div id="L06-03-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">请求 → app 级 dependencies(verify_api_key)
+    ├─ Key 错 → 401(不进路由)
+    └─ Key 对 → 路由级 dependencies → 路由函数</div>
+    <div id="L06-03-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ dependencies=[...] 里的依赖"只执行不注入值"，适合鉴权/限流/审计</div>
+    <div class="star">★ 三层级：FastAPI 全局 / APIRouter 路由组 / 单路由（≈ 拦截器范围）</div>
+  </section>
+
+  <!-- ============ 域 07 ============ -->
+  <div class="domain-head">域 07 · 中间件与后台</div>
+
+  <section id="L07-01">
+    <div class="lesson-banner d07"><div class="lesson-num">中间件与后台 / 01</div><div class="lesson-title">中间件 + CORS</div><div class="lesson-tags">易点·合并 ｜ ≈ Filter / CorsFilter</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">@app.middleware("http")</div><div class="v">拦截所有请求/响应（≈ Filter）</div></div>
+      <div class="cell"><div class="k">await call_next</div><div class="v">放行到下一层（≈ chain.doFilter）</div></div>
+      <div class="cell"><div class="k">洋葱模型</div><div class="v">请求正序进、响应逆序出</div></div>
+      <div class="cell"><div class="k">CORSMiddleware</div><div class="v">前后端分离必配（≈ @CrossOrigin）</div></div>
+    </div>
+    <pre><code><span class="kw">@app.middleware</span>(<span class="str">"http"</span>)
+<span class="kw">async def</span> timing(request, call_next):
+    start = time.time()
+    response = <span class="kw">await</span> call_next(request)   <span class="cmt"># 放行</span>
+    response.headers[<span class="str">"X-Process-Time"</span>] = ...
+    <span class="kw">return</span> response</code></pre>
+    <div id="L07-01-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">请求 → CORS → timing → 路由
+响应 ← CORS ← timing ← 路由   （洋葱：进正序、出逆序）</div>
+    <div id="L07-01-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ 中间件拦截所有请求/响应（≈ Filter），await call_next 放行；后加的在更外层</div>
+    <div class="star">★ CORSMiddleware 前后端分离必配；中间件是异步的，别写阻塞代码</div>
+  </section>
+
+  <section id="L07-02">
+    <div class="lesson-banner d07"><div class="lesson-num">中间件与后台 / 02</div><div class="lesson-title">后台任务 BackgroundTasks</div><div class="lesson-tags">≈ @Async</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">add_task(fn, args)</div><div class="v">登记"响应返回后"执行的活</div></div>
+      <div class="cell"><div class="k">适用</div><div class="v">发邮件/写日志/清理，客户端不等结果</div></div>
+      <div class="cell"><div class="k">边界</div><div class="v">同进程非分布式；重活该上 Celery</div></div>
+    </div>
+    <pre><code><span class="kw">@app.post</span>(<span class="str">"/register"</span>)
+<span class="kw">def</span> register(email: <span class="kw">str</span>, tasks: BackgroundTasks):
+    tasks.add_task(send_email, email, <span class="str">"欢迎"</span>)  <span class="cmt"># 登记，不执行</span>
+    <span class="kw">return</span> {<span class="str">"msg"</span>: <span class="str">"注册成功"</span>}   <span class="cmt"># 立刻返回，邮件后台发</span></code></pre>
+    <div id="L07-02-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">核心逻辑 → add_task(只登记) → 返回响应(客户端拿到结果)
+    →(响应发出后) 后台依次执行已登记任务</div>
+    <div id="L07-02-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ add_task 登记"响应后执行"的轻量活（≈ @Async）</div>
+    <div class="star">★ 要重试/持久化的重活该上 Celery/RQ，BackgroundTasks 不替代它</div>
+  </section>
+
+  <!-- ============ 域 08 ============ -->
+  <div class="domain-head">域 08 · 安全认证（整域细拆，无 Java 类比）</div>
+
+  <section id="L08-01">
+    <div class="lesson-banner d08"><div class="lesson-num">安全认证 / 01</div><div class="lesson-title">OAuth2 骨架：登录端点 + 受保护路由</div><div class="lesson-tags">难点·细拆</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">OAuth2PasswordBearer</div><div class="v">声明 token 从哪拿，驱动 /docs 的 Authorize</div></div>
+      <div class="cell"><div class="k">OAuth2PasswordRequestForm</div><div class="v">标准登录表单 username/password</div></div>
+      <div class="cell"><div class="k">受保护路由</div><div class="v">注入 oauth2_scheme，缺 token → 401</div></div>
+    </div>
+    <pre><code>oauth2_scheme = OAuth2PasswordBearer(tokenUrl=<span class="str">"token"</span>)
+<span class="kw">@app.get</span>(<span class="str">"/me"</span>)
+<span class="kw">def</span> me(token: Annotated[<span class="kw">str</span>, Depends(oauth2_scheme)]):
+    <span class="kw">return</span> {<span class="str">"token"</span>: token}   <span class="cmt"># 本课 token 是假的(=用户名)</span></code></pre>
+    <div id="L08-01-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">POST /token(表单) → 校验 → 返回 access_token
+GET /me  Header: Authorization: Bearer xxx
+    → oauth2_scheme 提取 token → 注入（没带→401）</div>
+    <div id="L08-01-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ 先跑通"登录拿 token → 带 Bearer token 访问"的闭环</div>
+    <div class="star">★ 接下来逐层加固：哈希〔08/02〕→ JWT〔08/03〕→ 当前用户〔08/04〕</div>
+  </section>
+
+  <section id="L08-02">
+    <div class="lesson-banner d08"><div class="lesson-num">安全认证 / 02</div><div class="lesson-title">密码哈希 bcrypt</div><div class="lesson-tags">难点·细拆 ｜ ≈ PasswordEncoder</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">CryptContext</div><div class="v">统一管理哈希算法 bcrypt</div></div>
+      <div class="cell"><div class="k">hash / verify</div><div class="v">存哈希、登录比对（≈ BCryptPasswordEncoder）</div></div>
+      <div class="cell"><div class="k">特性</div><div class="v">不可逆、加盐、同密码每次哈希不同</div></div>
+    </div>
+    <pre><code>pwd = CryptContext(schemes=[<span class="str">"bcrypt"</span>])
+_USERS = {<span class="str">"alice"</span>: pwd.hash(<span class="str">"pwd123"</span>)}   <span class="cmt"># 存哈希</span>
+<span class="kw">if</span> <span class="kw">not</span> pwd.verify(form.password, hashed): <span class="kw">raise</span> HTTPException(401)</code></pre>
+    <div id="L08-02-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">注册：明文 → hash(加盐) → 存库(绝不存明文)
+登录：取库中哈希 → verify(输入明文, 哈希) → 匹配?签发:401</div>
+    <div id="L08-02-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ 数据库只存 bcrypt 哈希，永不存明文（≈ Spring Security BCryptPasswordEncoder）</div>
+    <div class="star">★ 哈希不可逆：找回密码只能"重置"，相对上课只改了"明文比较→verify"</div>
+  </section>
+
+  <section id="L08-03">
+    <div class="lesson-banner d08"><div class="lesson-num">安全认证 / 03</div><div class="lesson-title">JWT 签发与解码</div><div class="lesson-tags">难点·细拆 ｜ ≈ jjwt</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">JWT 三段</div><div class="v">header.payload.signature，无状态自带签名</div></div>
+      <div class="cell"><div class="k">encode</div><div class="v">payload 放 sub(用户)+exp(过期)，用 SECRET 签名</div></div>
+      <div class="cell"><div class="k">decode</div><div class="v">自动验签+验过期，失败抛 JWTError</div></div>
+    </div>
+    <pre><code>payload = {<span class="str">"sub"</span>: username, <span class="str">"exp"</span>: now + timedelta(minutes=30)}
+token = jwt.encode(payload, SECRET_KEY, algorithm=<span class="str">"HS256"</span>)
+<span class="cmt"># decode 验签/验期，篡改或过期都抛 JWTError → 401</span></code></pre>
+    <div id="L08-03-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">签发：登录通过 → payload{sub,exp} --SECRET签名--> token
+校验：jwt.decode → 验签失败/过期 → JWTError → 401；通过 → 拿回 sub
+★ 服务器不存会话，验签即可 = 无状态认证</div>
+    <div id="L08-03-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ JWT 自带签名+过期，服务器只验签 = 无状态认证</div>
+    <div class="star">★ SECRET 绝不硬编码/提交 git，应放环境变量（〔10/02〕）</div>
+  </section>
+
+  <section id="L08-04">
+    <div class="lesson-banner d08"><div class="lesson-num">安全认证 / 04</div><div class="lesson-title">get_current_user 依赖</div><div class="lesson-tags">难点·细拆 ｜ ≈ @AuthenticationPrincipal</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">收口成依赖</div><div class="v">oauth2_scheme + decode + 查库 = 一个依赖</div></div>
+      <div class="cell"><div class="k">注入即得用户</div><div class="v">受保护路由拿到 User 对象</div></div>
+      <div class="cell"><div class="k">认证最终形态</div><div class="v">一处定义、所有路由复用</div></div>
+    </div>
+    <pre><code><span class="kw">def</span> get_current_user(token: Annotated[<span class="kw">str</span>, Depends(oauth2_scheme)]):
+    payload = jwt.decode(token, SECRET_KEY, ...)   <span class="cmt"># 失败→401</span>
+    <span class="kw">return</span> User(...)
+CurrentUser = Annotated[User, Depends(get_current_user)]
+<span class="kw">@app.get</span>(<span class="str">"/me"</span>)
+<span class="kw">def</span> me(user: CurrentUser): <span class="kw">return</span> user</code></pre>
+    <div id="L08-04-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">GET /me Bearer jwt
+    oauth2_scheme 取 token → decode 验签/期 → 取 sub → 查用户库
+    任一失败 → 401；全过 → 返回 User 注入路由</div>
+    <div id="L08-04-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ get_current_user 把认证收口成一个依赖，注入 CurrentUser 即拿到用户对象</div>
+    <div class="star">★ 这是认证域最终形态：08/01→04 一层层叠（骨架→哈希→JWT→当前用户）</div>
+  </section>
+
+  <section id="L08-05">
+    <div class="lesson-banner d08"><div class="lesson-num">安全认证 / 05</div><div class="lesson-title">权限作用域 Scopes</div><div class="lesson-tags">进阶 ｜ ≈ @PreAuthorize</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">token 带 scopes</div><div class="v">签发时写入用户拥有的权限</div></div>
+      <div class="cell"><div class="k">Security(dep, scopes=[])</div><div class="v">声明路由需要的权限（≈ @PreAuthorize）</div></div>
+      <div class="cell"><div class="k">认证 vs 授权</div><div class="v">你是谁(401) vs 你能干嘛(403)</div></div>
+    </div>
+    <pre><code><span class="kw">@app.post</span>(<span class="str">"/items"</span>)
+<span class="kw">def</span> create(user: Annotated[<span class="kw">dict</span>, Security(check, scopes=[<span class="str">"write"</span>])]):
+    <span class="cmt"># 路由要求 write；token 缺 write → 403</span></code></pre>
+    <div id="L08-05-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">要求 scopes ⊆ token 拥有 scopes ? 放行 : 403
+认证(你是谁)=get_current_user  授权(你能干嘛)=scopes</div>
+    <div id="L08-05-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ Security(dep, scopes=[...]) 按路由声明权限要求（≈ @PreAuthorize）</div>
+    <div class="star">★ 区分 401(没登录) 和 403(登录了但无权限)</div>
+  </section>
+
+  <!-- ============ 域 09 ============ -->
+  <div class="domain-head">域 09 · 数据库 SQLAlchemy</div>
+
+  <section id="L09-01">
+    <div class="lesson-banner d09"><div class="lesson-num">数据库 / 01</div><div class="lesson-title">数据库接入：engine / Session / get_db</div><div class="lesson-tags">≈ DataSource + @Entity + DTO</div></div>
+    <h3 class="blk">知识点</h3>
+    <table>
+      <tr><th>组件</th><th>作用</th><th>SpringBoot</th></tr>
+      <tr><td>engine / SessionLocal</td><td>连接 + 会话工厂</td><td>DataSource + EntityManager</td></tr>
+      <tr><td>DeclarativeBase 子类</td><td>ORM Model = 表</td><td>@Entity</td></tr>
+      <tr><td>get_db (yield)</td><td>每请求一会话自动关</td><td>每请求 Session</td></tr>
+      <tr><td>from_attributes</td><td>ORM → Pydantic 桥接</td><td>Entity → DTO</td></tr>
+    </table>
+    <pre><code><span class="kw">def</span> get_db():
+    db = SessionLocal()
+    <span class="kw">try</span>: <span class="kw">yield</span> db
+    <span class="kw">finally</span>: db.close()
+<span class="cmt"># 写三连：db.add(obj); db.commit(); db.refresh(obj)</span></code></pre>
+    <div id="L09-01-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">请求 → get_db 开会话 → Schema(收JSON)→ORM(存)→ORM(查)→Schema(发JSON)
+    → 响应后 finally 关会话
+ORM Model(持久化) ←from_attributes→ Pydantic Schema(JSON)</div>
+    <div id="L09-01-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ ORM Model(≈@Entity)管存储、Pydantic Schema(≈DTO)管 JSON，务必分离</div>
+    <div class="star">★ Schema 加 from_attributes=True 才能从 ORM 对象构建；写操作 add→commit→refresh</div>
+  </section>
+
+  <section id="L09-02">
+    <div class="lesson-banner d09"><div class="lesson-num">数据库 / 02</div><div class="lesson-title">完整 CRUD + get_or_404 + 软删除 + 分页</div><div class="lesson-tags">≈ Repository</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">get_or_404</div><div class="v">查不到抛 404（≈ orElseThrow），消除重复</div></div>
+      <div class="cell"><div class="k">PATCH</div><div class="v">exclude_unset 只更新传入字段</div></div>
+      <div class="cell"><div class="k">软删除</div><div class="v">is_deleted 标记，可恢复可审计</div></div>
+      <div class="cell"><div class="k">分页过滤</div><div class="v">.offset().limit() + filter</div></div>
+    </div>
+    <pre><code><span class="kw">for</span> k, v <span class="kw">in</span> patch.model_dump(exclude_unset=True).items():
+    setattr(obj, k, v)        <span class="cmt"># 只改客户端传了的字段</span>
+obj.is_deleted = True         <span class="cmt"># 软删除，不真删</span></code></pre>
+    <div id="L09-02-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">POST 创建 / GET 列表(过滤+分页,排除软删) / GET 详情(get_or_404)
+PATCH 部分更新(exclude_unset) / DELETE 软删除(204)</div>
+    <div id="L09-02-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ get_or_404 收口"查不到→404"；PATCH 用 exclude_unset 只改传入字段</div>
+    <div class="star">★ 软删除 = is_deleted 标记 + 查询统一过滤；分页用 offset/limit + Query 约束</div>
+  </section>
+
+  <section id="L09-03">
+    <div class="lesson-banner d09"><div class="lesson-num">数据库 / 03</div><div class="lesson-title">一对多关系 User → Posts</div><div class="lesson-tags">≈ @OneToMany</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">ForeignKey</div><div class="v">外键建在"多"的一方(posts.author_id)</div></div>
+      <div class="cell"><div class="k">relationship + back_populates</div><div class="v">双向关联</div></div>
+      <div class="cell"><div class="k">嵌套 Schema</div><div class="v">UserOut 含 list[PostOut]</div></div>
+    </div>
+    <pre><code>author_id: Mapped[<span class="kw">int</span>] = mapped_column(ForeignKey(<span class="str">"users.id"</span>))
+posts: Mapped[list[<span class="str">"PostORM"</span>]] = relationship(back_populates=<span class="str">"author"</span>)
+user.posts.append(PostORM(title=...))   <span class="cmt"># ORM 自动设外键</span></code></pre>
+    <div id="L09-03-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">users(id,name)   posts(id,title,author_id→users.id)
+User.posts ←back_populates→ Post.author（双向）
+读 user.posts 触发懒加载 → 埋了 N+1 隐患（见 09/05）</div>
+    <div id="L09-03-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ 一对多：外键 ForeignKey 建在"多"的一方；relationship+back_populates 双向</div>
+    <div class="star">★ 操作 user.posts.append，ORM 自动维护外键；嵌套 Schema 自然带出关联</div>
+  </section>
+
+  <section id="L09-04">
+    <div class="lesson-banner d09"><div class="lesson-num">数据库 / 04</div><div class="lesson-title">多对多关系 Post ↔ Tag</div><div class="lesson-tags">≈ @ManyToMany + @JoinTable</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">中间关联表</div><div class="v">Table 定义，只存双方外键（≈ @JoinTable）</div></div>
+      <div class="cell"><div class="k">secondary=</div><div class="v">relationship(secondary=关联表) 声明多对多</div></div>
+      <div class="cell"><div class="k">双向</div><div class="v">Post.tags ↔ Tag.posts</div></div>
+    </div>
+    <pre><code>post_tag = Table(<span class="str">"post_tag"</span>, Base.metadata,
+    Column(<span class="str">"post_id"</span>, ForeignKey(<span class="str">"posts.id"</span>), primary_key=True),
+    Column(<span class="str">"tag_id"</span>, ForeignKey(<span class="str">"tags.id"</span>), primary_key=True))
+tags = relationship(secondary=post_tag, back_populates=<span class="str">"posts"</span>)</code></pre>
+    <div id="L09-04-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">posts / tags / post_tag(中间表只存两外键)
+post.tags.append(tag) → ORM 自动往中间表插一行
+tag.posts → 经中间表反查所有关联 Post</div>
+    <div id="L09-04-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ 多对多必须有中间关联表（≈ @JoinTable），relationship(secondary=) 声明</div>
+    <div class="star">★ 操作 post.tags.append，ORM 自动维护中间表，无需手插</div>
+  </section>
+
+  <section id="L09-05">
+    <div class="lesson-banner d09"><div class="lesson-num">数据库 / 05</div><div class="lesson-title">N+1 查询问题与急加载</div><div class="lesson-tags">难点·细拆 ｜ ≈ Hibernate N+1</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">懒加载</div><div class="v">访问关系时才查 → 列表触发 N+1</div></div>
+      <div class="cell"><div class="k">N+1</div><div class="v">1 条列表 + N 条关系 = N+1 条 SQL</div></div>
+      <div class="cell"><div class="k">joinedload</div><div class="v">JOIN 一次查完（≈ fetch join）</div></div>
+      <div class="cell"><div class="k">selectinload</div><div class="v">2 条 IN 查询，集合更优</div></div>
+    </div>
+    <pre><code><span class="cmt"># ✗ N+1</span>  db.query(UserORM).all()
+<span class="cmt"># ✓</span>  db.query(UserORM).options(joinedload(UserORM.posts)).all()
+<span class="cmt"># ✓ 集合优先</span>  .options(selectinload(UserORM.posts))</code></pre>
+    <div id="L09-05-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">懒加载查N用户文章：SELECT users(1) + SELECT posts WHERE author_id=?(×N) = 1+N
+joinedload：1 条 LEFT JOIN 全搞定
+selectinload：users(1) + posts WHERE author_id IN(...)(1) = 2 条</div>
+    <div id="L09-05-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ N+1 是 ORM 头号性能坑；.options(joinedload/selectinload) 急加载解决</div>
+    <div class="star">★ 集合优先 selectinload(2 条 IN)；开 echo=True 打印 SQL 最易定位</div>
+  </section>
+
+  <section id="L09-06">
+    <div class="lesson-banner d09"><div class="lesson-num">数据库 / 06</div><div class="lesson-title">Alembic 数据库迁移</div><div class="lesson-tags">进阶 ｜ ≈ Flyway / Liquibase</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">create_all 局限</div><div class="v">只建新表，不会改已存在的表结构</div></div>
+      <div class="cell"><div class="k">Alembic</div><div class="v">版本脚本记录变更，可升级/回滚</div></div>
+      <div class="cell"><div class="k">autogenerate</div><div class="v">对比 Model 与数据库自动生成脚本</div></div>
+    </div>
+    <pre><code>alembic init alembic
+<span class="cmt"># env.py: target_metadata = Base.metadata</span>
+alembic revision --autogenerate -m <span class="str">"add price"</span>
+alembic upgrade head        <span class="cmt"># 应用</span>
+alembic downgrade -1        <span class="cmt"># 回滚</span></code></pre>
+    <div id="L09-06-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">改 Model → revision --autogenerate → 人审脚本 → upgrade head
+出问题 → downgrade -1
+create_all(只建表) vs Alembic(版本化/可回滚/团队同步)</div>
+    <div id="L09-06-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ create_all 不改已存在表结构，生产靠 Alembic 版本化迁移（≈ Flyway）</div>
+    <div class="star">★ autogenerate 脚本要人工复核；迁移脚本随代码提交 git</div>
+  </section>
+
+  <!-- ============ 域 10 ============ -->
+  <div class="domain-head">域 10 · 工程化</div>
+
+  <section id="L10-01">
+    <div class="lesson-banner d10"><div class="lesson-num">工程化 / 01</div><div class="lesson-title">APIRouter 拆分大项目</div><div class="lesson-tags">重要 ｜ ≈ 多 @RestController</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">APIRouter()</div><div class="v">一组路由 = 一个模块（≈ Controller）</div></div>
+      <div class="cell"><div class="k">prefix / tags</div><div class="v">统一前缀 + /docs 分组</div></div>
+      <div class="cell"><div class="k">include_router</div><div class="v">挂到主 app（≈ 组件装配）</div></div>
+    </div>
+    <pre><code>users_router = APIRouter(prefix=<span class="str">"/users"</span>, tags=[<span class="str">"用户"</span>])
+<span class="kw">@users_router.get</span>(<span class="str">""</span>)
+<span class="kw">def</span> list_users(): ...
+app.include_router(users_router)   <span class="cmt"># 主 app 只负责组装</span></code></pre>
+    <div id="L10-01-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">routers/users.py → users_router(prefix,tags)
+routers/items.py → items_router
+main.py → app.include_router(各 router)（主文件保持轻薄）</div>
+    <div id="L10-01-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ APIRouter ≈ 一个 Controller，按资源拆；prefix/tags + include_router 组装</div>
+    <div class="star">★ 主文件只做组装与全局配置，router 也能挂 dependencies 统一鉴权</div>
+  </section>
+
+  <section id="L10-02">
+    <div class="lesson-banner d10"><div class="lesson-num">工程化 / 02</div><div class="lesson-title">配置管理 pydantic-settings</div><div class="lesson-tags">≈ @ConfigurationProperties</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">BaseSettings</div><div class="v">字段自动从环境变量读，类型即转换</div></div>
+      <div class="cell"><div class="k">.env</div><div class="v">本地开发默认值，必须 .gitignore</div></div>
+      <div class="cell"><div class="k">@lru_cache</div><div class="v">只构建一次，避免每请求重读</div></div>
+    </div>
+    <pre><code><span class="kw">class</span> Settings(BaseSettings):
+    secret_key: <span class="kw">str</span> = <span class="str">"dev-change-me"</span>   <span class="cmt"># 环境变量 SECRET_KEY</span>
+    debug: <span class="kw">bool</span> = False              <span class="cmt"># DEBUG=1 → True</span>
+    model_config = SettingsConfigDict(env_file=<span class="str">".env"</span>)</code></pre>
+    <div id="L10-02-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">优先级：真实环境变量 > .env > 代码默认值
+Settings() 实例化自动读取+按字段类型转换/校验
+@lru_cache get_settings → Depends 注入</div>
+    <div id="L10-02-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ BaseSettings 自动从环境读（≈ @ConfigurationProperties），类型注解即转换</div>
+    <div class="star">★ 敏感配置一律走环境，绝不硬编码；回去把 08/03 的 SECRET 改成从 Settings 读</div>
+  </section>
+
+  <section id="L10-03">
+    <div class="lesson-banner d10"><div class="lesson-num">工程化 / 03</div><div class="lesson-title">生命周期 lifespan</div><div class="lesson-tags">≈ @PostConstruct / @PreDestroy</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">@asynccontextmanager</div><div class="v">yield 前=启动、yield 后=关闭</div></div>
+      <div class="cell"><div class="k">app.state</div><div class="v">存全局资源(连接池/模型)，路由 request.app.state 取</div></div>
+      <div class="cell"><div class="k">作用域</div><div class="v">应用级（区别于 yield 依赖的请求级）</div></div>
+    </div>
+    <pre><code><span class="kw">@asynccontextmanager</span>
+<span class="kw">async def</span> lifespan(app):
+    app.state.pool = create_pool()   <span class="cmt"># 启动</span>
+    <span class="kw">yield</span>
+    app.state.pool.close()           <span class="cmt"># 关闭</span></code></pre>
+    <div id="L10-03-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">启动 → yield 前(建池/加载模型,存 app.state)
+运行(路由用 request.app.state 取)
+关闭信号 → yield 后(释放)
+lifespan=应用级  vs  yield 依赖=请求级</div>
+    <div id="L10-03-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ lifespan = 应用级启停钩子，全局资源存 app.state（取代废弃的 on_event）</div>
+    <div class="star">★ 区分作用域：lifespan 应用级 vs yield 依赖请求级</div>
+  </section>
+
+  <section id="L10-04">
+    <div class="lesson-banner d10"><div class="lesson-num">工程化 / 04</div><div class="lesson-title">测试 TestClient + pytest</div><div class="lesson-tags">≈ MockMvc + JUnit</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">TestClient(app)</div><div class="v">内存直调接口，无需启服务（≈ MockMvc）</div></div>
+      <div class="cell"><div class="k">pytest</div><div class="v">test_ 函数 + assert（≈ @Test）</div></div>
+      <div class="cell"><div class="k">dependency_overrides</div><div class="v">替换依赖换测试库（≈ @MockBean）</div></div>
+    </div>
+    <pre><code>client = TestClient(app)
+<span class="kw">def</span> test_add():
+    resp = client.get(<span class="str">"/add"</span>, params={<span class="str">"a"</span>: 2, <span class="str">"b"</span>: 3})
+    <span class="kw">assert</span> resp.status_code == 200
+    <span class="kw">assert</span> resp.json() == {<span class="str">"result"</span>: 5}</code></pre>
+    <div id="L10-04-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">pytest → 发现 test_* → TestClient 内存直达 app → assert 状态码+响应体
+override: app.dependency_overrides[真依赖]=测试依赖 → 用完 clear</div>
+    <div id="L10-04-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ TestClient ≈ MockMvc 内存直调；断言要覆盖状态码 + 响应体 + 错误路径</div>
+    <div class="star">★ dependency_overrides 换测试库（≈ @MockBean），用完 clear 防污染</div>
+  </section>
+
+  <section id="L10-05">
+    <div class="lesson-banner d10"><div class="lesson-num">工程化 / 05</div><div class="lesson-title">WebSocket 双向通信</div><div class="lesson-tags">进阶 ｜ ≈ @ServerEndpoint</div></div>
+    <h3 class="blk">知识点</h3>
+    <div class="grid">
+      <div class="cell"><div class="k">@app.websocket</div><div class="v">accept 握手 → receive/send 双向收发</div></div>
+      <div class="cell"><div class="k">长连接</div><div class="v">while True 循环 + WebSocketDisconnect 捕获断开</div></div>
+      <div class="cell"><div class="k">服务器主动推</div><div class="v">HTTP 做不到，适合聊天/通知</div></div>
+    </div>
+    <pre><code><span class="kw">@app.websocket</span>(<span class="str">"/ws"</span>)
+<span class="kw">async def</span> ws_echo(ws: WebSocket):
+    <span class="kw">await</span> ws.accept()
+    <span class="kw">while</span> True:
+        msg = <span class="kw">await</span> ws.receive_text()
+        <span class="kw">await</span> ws.send_text(f<span class="str">"echo: {msg}"</span>)</code></pre>
+    <div id="L10-05-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">HTTP：请求→响应(一次性,不能主动推)
+WebSocket：accept 建长连接 ⇅ 双向收发(可主动 push) → disconnect 清理
+广播：连接列表 + 遍历群发</div>
+    <div id="L10-05-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ accept 握手后 receive/send 双向；while True + WebSocketDisconnect 清理</div>
+    <div class="star">★ 服务器可主动 push（HTTP 做不到）；端点天然 async，别写阻塞代码</div>
+  </section>
+
+  <section id="L10-06">
+    <div class="lesson-banner d10"><div class="lesson-num">工程化 / 06</div><div class="lesson-title">综合项目：Todo 任务管理 API</div><div class="lesson-tags">收官·组装所有积木</div></div>
+    <h3 class="blk">综合运用</h3>
+    <table>
+      <tr><th>能力</th><th>来自</th></tr>
+      <tr><td>APIRouter 认证/任务分组 + tags</td><td>10/01</td></tr>
+      <tr><td>JWT 登录 + get_current_user 保护</td><td>08/03 · 08/04</td></tr>
+      <tr><td>yield 依赖 get_db + get_task_or_404</td><td>06/02 · 09/02</td></tr>
+      <tr><td>多对多 Task↔Tag + joinedload 防 N+1</td><td>09/04 · 09/05</td></tr>
+      <tr><td>response_model + Field + 软删除 + 分页</td><td>03 · 04 · 09/02</td></tr>
+    </table>
+    <pre><code><span class="cmt"># 登录: POST /auth/token (alice/pwd123) → 拿 JWT</span>
+<span class="cmt"># 任务(需 Bearer): POST/GET/PATCH/DELETE /tasks</span>
+<span class="kw">def</span> create_task(data: TaskCreate, db: DbDep, user: CurrentUser): ...</code></pre>
+    <div id="L10-06-flow"></div><h3 class="blk">执行流程图</h3>
+    <div class="flow">POST /auth/token 登录拿 token → Authorize
+所有 /tasks 路由经 get_current_user 保护(未登录 401)
+列表用 joinedload 一次带出 tags，避免 N+1</div>
+    <div id="L10-06-star"></div><h3 class="blk">★ 核心规律</h3>
+    <div class="star">★ 这一课只是"组装"：积木全来自前面各域，真实项目即如此拼起来</div>
+    <div class="star">★ 再进一步：路由拆多文件、配置走 Settings、表结构用 Alembic、补 pytest</div>
+  </section>
+
+</main>
+
+<script>
+  // 手风琴：点父条目展开/收起子菜单，同时高亮
+  const lessons = document.querySelectorAll('.nav-lesson');
+  lessons.forEach(el => {
+    el.addEventListener('click', () => {
+      const sub = el.nextElementSibling;
+      const isOpen = el.classList.contains('open');
+      // 收起所有
+      lessons.forEach(o => { o.classList.remove('open'); o.nextElementSibling.classList.remove('open'); });
+      if (!isOpen) { el.classList.add('open'); sub.classList.add('open'); }
+    });
+  });
+
+  // IntersectionObserver：滚动到某课，自动展开其 nav、收起其他
+  const sections = document.querySelectorAll('section[id]');
+  const byId = id => document.querySelector('.nav-lesson[data-target="' + id + '"]');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const nav = byId(e.target.id);
+        if (!nav) return;
+        lessons.forEach(o => {
+          o.classList.remove('active', 'open');
+          o.nextElementSibling.classList.remove('open');
+        });
+        nav.classList.add('active', 'open');
+        nav.nextElementSibling.classList.add('open');
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

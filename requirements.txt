@@ -1,0 +1,22 @@
+# FastAPI 学习项目 v2 依赖
+# 安装：python -m venv .venv && .venv\Scripts\activate && pip install -r requirements.txt
+
+fastapi
+uvicorn[standard]          # ASGI 服务器（含 --reload、websockets 支持）
+pydantic                   # 数据校验（≈ Bean Validation），FastAPI 自带依赖
+pydantic-settings          # 配置管理〔10_工程化/02〕（≈ @ConfigurationProperties）
+
+# 数据库域 09
+sqlalchemy                 # ORM（≈ JPA / Hibernate）
+alembic                    # 数据库迁移〔10_工程化 / 09 域进阶〕（≈ Flyway）
+
+# 安全认证域 08
+python-jose[cryptography]  # JWT 签发/解码
+passlib[bcrypt]            # 密码哈希
+python-multipart           # 表单/文件上传〔03_请求体与Pydantic/02〕、OAuth2 表单登录
+
+# 请求外部接口 / 异步演示
+httpx                      # 异步 HTTP 客户端〔01_基础/02〕，TestClient 也依赖它
+
+# 测试域
+pytest                     # 〔10_工程化/04〕（≈ JUnit + MockMvc）
